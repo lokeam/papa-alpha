@@ -1,0 +1,29 @@
+# Only ignore things that should NEVER be in any Docker context
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+
+# Node (frontend not containerized)
+frontend/node_modules/
+frontend/.next/
+
+# Docker
+docker-compose.yml
+docker-compose.override.yml
+
+# Documentation
+README.md
+docs/

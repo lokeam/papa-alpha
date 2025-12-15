@@ -1,0 +1,78 @@
+version: '3.9'
+
+services:
+  # Python Workers Service
+  worker:
+    build:
+      context: ./workers
+      dockerfile: Dockerfile
+    container_name: papa-alpha-workers
+    ports:
+      - "8000:8000"
+    environment:
+      # Supabase connection (running on host)
+      - SUPABASE_URL=${SUPABASE_URL:-http://host.docker.internal:54321}
+      - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
+
+      # Redis connection (in Docker)
+      - REDIS_URL=redis://redis:6379
+
+      # LLM API
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+
+      # Environment
+      - PYTHON_ENV=${PYTHON_ENV:-development}
+    volumes:
+      # Mount worker code for hot reload (optional)
+      - ./workers:/app
+      # Shared uploads directory
+      - ./uploads:/app/uploads
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  # Redis for job queue and pub/sub
+  redis:
+    image: redis:7-alpine
+    container_name: papa-alpha-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+
+  # Redis Commander - Visual UI for debugging
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: papa-alpha-redis-commander
+    ports:
+      - "8081:8081"
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    depends_on:
+      - redis
+    networks:
+      - app-network
+    restart: unless-stopped
+
+networks:
+  app-network:
+    name: papa-alpha-network
+    driver: bridge
+
+volumes:
+  redis-data:
+    name: papa-alpha-redis-data
