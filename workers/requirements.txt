@@ -1,0 +1,26 @@
+# Web Framework
+fastapi>=0.109.0,<0.110.0
+uvicorn[standard]>=0.27.0,<0.28.0
+pydantic>=2.5.0,<3.0.0
+pydantic-settings>=2.1.0,<3.0.0
+
+# HTTP Client (let supabase control httpx version)
+requests>=2.31.0,<3.0.0
+
+# Supabase
+supabase>=2.3.0,<3.0.0
+
+# Redis
+redis>=5.0.0,<6.0.0
+
+# PDF Processing
+pypdf2>=3.0.0,<4.0.0
+pdfplumber>=0.10.0,<0.11.0
+
+# LLM Clients
+anthropic>=0.18.0,<0.19.0
+openai>=1.10.0,<2.0.0
+
+# Utilities
+python-dotenv>=1.0.0,<2.0.0
+python-multipart>=0.0.6,<0.1.0

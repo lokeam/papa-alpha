@@ -22,28 +22,28 @@ frontend/next-env.d.ts
 
 
 #==========================================
-# Worker (Python)
+# Workers (Python)
 #==========================================
-worker/__pycache__/
-worker/*.py[cod]
-worker/*$py.class
-worker/*.so
-worker/.Python
-worker/venv/
-worker/env/
-worker/ENV/
-worker/.venv/
-worker/pip-log.txt
-worker/pip-delete-this-directory.txt
-worker/.pytest_cache/
-worker/.coverage
-worker/htmlcov/
-worker/*.egg-info/
-worker/dist/
-worker/build/
-worker/.mypy_cache/
-worker/.ruff_cache/
-worker/.ipynb_checkpoints/
+workers/__pycache__/
+workers/*.py[cod]
+workers/*$py.class
+workers/*.so
+workers/.Python
+workers/venv/
+workers/env/
+workers/ENV/
+workers/.venv/
+workers/pip-log.txt
+workers/pip-delete-this-directory.txt
+workers/.pytest_cache/
+workers/.coverage
+workers/htmlcov/
+workers/*.egg-info/
+workers/dist/
+workers/build/
+workers/.mypy_cache/
+workers/.ruff_cache/
+workers/.ipynb_checkpoints/
 
 
 #==========================================
