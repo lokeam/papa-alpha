@@ -24,7 +24,7 @@
 #
 # ---------------------------------------------------------------------------
 
-.PHONY: help setup start stop restart logs health clean reset supabase-start supabase-stop supabase-reset frontend-dev worker-logs redis-logs check-ports
+.PHONY: help setup start stop restart logs health clean reset supabase-start supabase-stop supabase-reset frontend-dev worker-logs redis-logs worker-build worker-start worker-stop worker-restart worker-shell check-ports
 
 # Colors
 BLUE := \033[34m
@@ -64,6 +64,11 @@ help:
 	@echo "  make health             - Check service health"
 	@echo "  make logs               - View all Docker logs"
 	@echo "  make worker-logs        - View worker logs"
+	@echo "  make worker-build       - Rebuild worker Docker image"
+	@echo "  make worker-start       - Start worker only"
+	@echo "  make worker-stop        - Stop worker only"
+	@echo "  make worker-restart     - Rebuild and restart worker"
+	@echo "  make worker-shell       - Open shell in worker container"
 	@echo "  make redis-logs         - View Redis logs"
 	@echo "  make redis-ui           - Open Redis Commander in browser"
 	@echo ""
@@ -231,6 +236,37 @@ redis-logs:
 redis-ui:
 	@echo "$(BLUE)Opening Redis Commander...$(RESET)"
 	@open http://localhost:8081 || echo "$(YELLOW)Open http://localhost:8081 in your browser$(RESET)"
+
+# ---------------------------------------------------------------------------
+# Worker Commands
+# ---------------------------------------------------------------------------
+worker-build:
+	@echo "$(BLUE)Building worker Docker image...$(RESET)"
+	@docker compose build worker
+	@echo "$(GREEN)Worker image built$(RESET)"
+
+worker-start:
+	@echo "$(BLUE)Starting worker...$(RESET)"
+	@docker compose up -d worker
+	@echo "$(GREEN)Worker started$(RESET)"
+	@echo "$(YELLOW)View logs: make worker-logs$(RESET)"
+
+worker-stop:
+	@echo "$(BLUE)Stopping worker...$(RESET)"
+	@docker compose stop worker
+	@echo "$(GREEN)Worker stopped$(RESET)"
+
+worker-restart:
+	@echo "$(BLUE)Rebuilding and restarting worker...$(RESET)"
+	@docker compose down worker
+	@docker compose build worker
+	@docker compose up -d worker
+	@echo "$(GREEN)Worker restarted$(RESET)"
+	@echo "$(YELLOW)View logs: make worker-logs$(RESET)"
+
+worker-shell:
+	@echo "$(BLUE)Opening shell in worker container...$(RESET)"
+	@docker compose exec worker /bin/bash || docker compose exec worker /bin/sh
 
 # ---------------------------------------------------------------------------
 # Cleanup Commands

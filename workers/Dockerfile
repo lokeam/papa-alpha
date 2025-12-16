@@ -35,9 +35,7 @@ ENV PATH=/root/.local/bin:$PATH
 # Create uploads directory
 RUN mkdir -p /app/uploads
 
-EXPOSE 8000
+# No port exposure needed - worker polls Redis, doesn't serve HTTP
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:8000/health')" || exit 1
-
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+# Run the worker directly
+CMD ["python", "main.py"]
