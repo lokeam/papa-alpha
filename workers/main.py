@@ -8,10 +8,12 @@ import sys
 import json
 import signal
 import logging
-
+import tempfile
+from pathlib import Path
 from typing import Optional, Dict, Any
 from redis import Redis
 from supabase import create_client, Client
+import pdfplumber
 
 
 logging.basicConfig(
@@ -71,16 +73,101 @@ class RFPWorker:
             self.redis_client.close()
             logger.info("Disconnected from Redis")
 
+    def download_pdf(self, storage_path: str) -> str:
+        """Download PDF from Supabase Storage to temporary file
+        Accepts:
+            storage_path: Path in Supabase Storage (e.g. 'uploads/file.pdf)
+
+        Returns:
+            Path to downloaded temporary file
+
+        Raises:
+            Exception if download fails
+        """
+        try:
+            logger.info(f"Downloading PDF from storage: {storage_path}")
+
+            # Download file from Supabase Storage
+            response = self.supabase_client.storage.from_('documents').download(storage_path)
+
+            # Create temporary file
+            temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf')
+            temp_file.write(response)
+            temp_file.close()
+
+            logger.info(f"PDF downloaded to: {temp_file.name}")
+            return temp_file.name
+
+        except Exception as e:
+            logger.error(f"Failed to download PDF from {storage_path}: {e}")
+            raise
+
+    def extract_text(self, pdf_path: str) -> str:
+        """Extract text from PDF file
+        Accepts:
+            pdf_path: Path to PDF file
+        Returns:
+            Extracted text from PDF
+        Raises:
+            Exception if extraction fails
+        """
+        try:
+            logger.info(f"Extracting text from PDF: {pdf_path}")
+
+            extracted_text_arr = []
+
+            with pdfplumber.open(pdf_path) as pdf:
+                total_pages = len(pdf.pages)
+                logger.info(f"PDF has {total_pages} pages")
+
+                for page_num, page in enumerate(pdf.pages, start=1):
+                    page_text = page.extract_text()
+
+                    if page_text:
+                        extracted_text_arr.append(page_text)
+                        logger.debug(f"Extracted {len(page_text)} chars from page {page_num}")
+                    else:
+                        logger.warning(f"No text found on page {page_num}")
+
+            full_text = "\n\n".join(extracted_text_arr)
+
+            if not full_text.strip():
+                raise ValueError("No text could be extracted from PDF")
+
+            logger.info(f"Extracted {len(full_text)} total characters from {total_pages} pages")
+            return full_text
+
+        except Exception as e:
+            logger.error(f"Failed to extract from {pdf_path}: {e}")
+            raise
+        finally:
+            # Clean up temp file
+            try:
+                if os.path.exists(pdf_path):
+                    os.unlink(pdf_path)
+                    logger.debug(f"Cleaned up temp file: {pdf_path}")
+            except Exception as e:
+                logger.warning(f"Failed to clean up temp file {pdf_path}: {e}")
+
+
     def process_job(self, job_data: Dict[str, Any]):
-        """Process a single RFP analysis job"""
+        """Process single RFP analysis job"""
         document_id = job_data.get('documentId')
         storage_path = job_data.get('storagePath')
         filename = job_data.get('filename')
 
         logger.info(f"Processing job for document {document_id}: {filename}")
 
+        pdf_path = None
+
         try:
-            # TODO: Download pdf + extract text
+            # Download pdf + extract text
+            pdf_path = self.download_pdf(storage_path)
+            extracted_text = self.extract_text(pdf_path)
+
+            logger.info(f"Text extraction complete: {len(extracted_text)} characters")
+            logger.info(f"Preview: {extracted_text[:200]}...")
+
             # TODO: Call ChatGPT API
             # TODO: Update db with results
 
