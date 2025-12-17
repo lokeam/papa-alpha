@@ -77,12 +77,14 @@ class LLMService:
         self,
         document_id: str,
         full_text: str,
+        progress_publisher=None,
     ) -> AnalysisResults:
         """Run complete RFP analysis (all 4 categories)
 
         Accepts:
             document_id: Document UUID
             full_text: Complete extracted RFP text
+            progress_publisher: Optional ProgressPublisher for real-time updates
 
         Returns:
             AnalysisResults with all category results and cost tracking
@@ -98,6 +100,10 @@ class LLMService:
 
         # Phase 1: Run 3 analyses in parallel
         logger.info("Phase 1: Running parallel analyses (risks, accessibility, subcontracting)")
+        # Publish progress before starting
+        if progress_publisher:
+            progress_publisher.publish("analyzing_risks")
+
         results = await asyncio.gather(
             self._analyze_risks(full_text, metadata),
             self._analyze_accessibility(full_text, metadata),
@@ -125,11 +131,15 @@ class LLMService:
 
         # Phase 2: Run questions (depends on risks)
         logger.info("Phase 2: Running sequential analysis (questions)")
+        # Publish progress before questions
+        if progress_publisher:
+            progress_publisher.publish("analyzing_questions")
+
         questions_result = None
         try:
             # Pass risks as context if available
             risks_context = None
-            if risks_result and risks_result.risks:
+            if isinstance(risks_result, RisksAnalysis):
                 risks_context = [r.dict() for r in risks_result.risks[:5]]
 
             questions_result = await self._analyze_questions(

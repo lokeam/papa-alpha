@@ -50,3 +50,32 @@ QUEUE_POLL_TIMEOUT = 5  # seconds
 # ============================================================================
 
 STORAGE_BUCKET = "documents"
+
+# ============================================================================
+# Progress Tracking Config
+# ============================================================================
+
+# Progress milestones (step name -> percentage)
+PROGRESS_MILESTONES = {
+    "uploaded": 10,
+    "extracting_text": 30,
+    "analyzing_risks": 40,
+    "analyzing_accessibility": 60,
+    "analyzing_questions": 80,
+    "analyzing_subcontracting": 90,
+    "completed": 100,
+}
+
+# Progress messages (user-friendly descriptions)
+PROGRESS_MESSAGES = {
+    "uploaded": "PDF uploaded successfully",
+    "extracting_text": "Extracting text from PDF...",
+    "analyzing_risks": "Analyzing identified risks...",
+    "analyzing_accessibility": "Analyzing small business accessibility...",
+    "analyzing_questions": "Generating clarifying questions...",
+    "analyzing_subcontracting": "Identifying subcontracting opportunities...",
+    "completed": "Analysis complete!",
+}
+
+# Redis channel prefix for progress updates
+PROGRESS_CHANNEL_PREFIX = "progress"

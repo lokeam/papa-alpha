@@ -1,5 +1,7 @@
 """RFP Worker - orchestrates job processing"""
 
+import asyncio
+import json
 import logging
 from typing import Dict, Any, Optional
 from redis import Redis
@@ -12,11 +14,9 @@ from config import (
     QUEUE_NAME,
     QUEUE_POLL_TIMEOUT,
     STORAGE_BUCKET,
-    DEFAULT_LLM_MODEL,
 )
-from services.pdf_service import PDFService
-from services.storage_service import StorageService
-from utils.cost_calculator import CostCalculator
+from services import PDFService, StorageService, LLMService
+from utils import ProgressPublisher
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ class RFPWorker:
         # Services (initialized after connect())
         self.pdf_service: Optional[PDFService] = None
         self.storage_service: Optional[StorageService] = None
-        self.cost_calculator = CostCalculator()
+        self.llm_service: Optional[LLMService] = None
 
         # Validate environment
         if not SUPABASE_SERVICE_ROLE_KEY:
@@ -55,6 +55,7 @@ class RFPWorker:
         # Initialize services
         self.pdf_service = PDFService(self.supabase_client, STORAGE_BUCKET)
         self.storage_service = StorageService(self.supabase_client)
+        self.llm_service = LLMService() # Uses OPENAI_API_KEY from config
 
     def disconnect(self):
         """Disconnect from Redis and Supabase"""
@@ -62,10 +63,10 @@ class RFPWorker:
             self.redis_client.close()
             logger.info("Disconnected from Redis")
 
-    def process_job(self, job_data: Dict[str, Any]):
-        """Process single RFP analysis job
+    async def process_job(self, job_data: Dict[str, Any]):
+        """Process single RFP analysis job (async)
 
-        Args:
+        Accepts:
             job_data: Job data containing documentId, storagePath, filename
         """
         document_id = job_data.get('documentId')
@@ -74,35 +75,78 @@ class RFPWorker:
 
         logger.info(f"Processing job for document {document_id}: {filename}")
 
+        # Initialize progress publisher
+        progress = ProgressPublisher(self.redis_client, document_id)
+
         pdf_path = None
 
         try:
-            # Download PDF
+            # Mark as processing
+            self.storage_service.mark_processing(document_id)
+            progress.publish("uploaded")
+
+            # Step 1: Download PDF
+            logger.info(f"Downloading PDF from {storage_path}")
             pdf_path = self.pdf_service.download_pdf(storage_path)
 
-            # Extract text
+            # Step 2: Extract text
+            logger.info("Extracting text from PDF")
+            progress.publish("extracting_text")
             extracted_text = self.pdf_service.extract_text(pdf_path)
+            logger.info(f"Extracted {len(extracted_text)} characters")
 
-            # TODO - Analyze with LLM
-            logger.info("TODO: Call ChatGPT API for analysis")
-
-            # Test cost calculation (will be replaced with actual LLM usage)
-            test_usage = self.cost_calculator.calculate(
-                model=DEFAULT_LLM_MODEL,
-                input_tokens=8234,
-                output_tokens=1567,
-                duration_seconds=3.2
+            # Step 3: Run LLM analysis (async) - LLMService will publish progress
+            logger.info("Starting LLM analysis (4 categories)...")
+            analysis_results = await self.llm_service.analyze_rfp(
+                document_id=document_id,
+                full_text=extracted_text,
+                progress_publisher=progress
             )
-            logger.info(f"Test LLM cost calculation: {test_usage}")
 
-            # TODO - Update database with results
-            logger.info("TODO: Update database with analysis results")
+            # Step 4: Prepare LLM usage metrics
+            llm_usage = {
+                "total_tokens": analysis_results.total_tokens,
+                "input_tokens": analysis_results.total_input_tokens,
+                "output_tokens": analysis_results.total_output_tokens,
+                "total_cost_usd": analysis_results.total_cost_usd,
+                "processing_time_seconds": analysis_results.processing_time_seconds,
+                "model": analysis_results.model,
+                "categories_completed": analysis_results.get_success_rate(),
+                "partial_results": analysis_results.partial_results,
+            }
 
-            logger.info(f"✓ Job {document_id} processed successfully")
+            # Step 5: Update database with results
+            logger.info(
+                f"Analysis complete: {analysis_results.processing_time_seconds:.1f}s, "
+                f"${analysis_results.total_cost_usd:.4f}, "
+                f"{analysis_results.get_success_rate():.0f}% success"
+            )
+
+            self.storage_service.mark_completed(
+                document_id=document_id,
+                analysis_results=analysis_results,  # Pydantic model (will be serialized)
+                llm_usage=llm_usage
+            )
+
+            # Publish completion
+            progress.publish("completed")
+            logger.info(f"Job {document_id} completed successfully")
 
         except Exception as e:
-            logger.error(f"Error processing job {document_id}: {e}")
-            # TODO: Update document status to 'error' in database
+            error_msg = f"Error processing job {document_id}: {str(e)}"
+            logger.error(error_msg, exc_info=True)
+
+            # Publish error to progress channel
+            try:
+                progress.publish_error(error_msg)
+            except:
+                pass  # Don't fail if progress publish fails
+
+            # Mark as failed in database
+            try:
+                self.storage_service.mark_failed(document_id, error_msg)
+            except Exception as db_error:
+                logger.error(f"Failed to update error status: {db_error}")
 
         finally:
             # Clean up temp file
@@ -117,9 +161,10 @@ class RFPWorker:
 
             if result:
                 queue_name, job_json = result
-                import json
                 job_data = json.loads(job_json)
-                self.process_job(job_data)
+
+                # Run async process_job in event loop
+                asyncio.run(self.process_job(job_data))
 
         except Exception as e:
             logger.error(f"Error polling queue: {e}")
