@@ -1,5 +1,7 @@
 'use client';
 
+import { useSearchParams, useRouter } from 'next/navigation';
+
 // Layout
 import { PageMain } from '@/components/layout/page-main';
 import { PageGrid } from '@/components/layout/page-grid';
@@ -11,49 +13,81 @@ import { DashboardFooter } from '@/app/dashboard/components/DashboardFooter';
 import { NextSteps } from '@/app/dashboard/components/NextSteps';
 import { ScopeCard } from '@/app/dashboard/components/ScopeCard';
 
+// Hooks
+import { useDocumentAnalysis } from '@/app/lib/hooks/useDocumentAnalysis';
 
-// Mock data
-  const analysisData = {
-    title: 'IT Services RFP - Analysis Complete',
-    filename: 'IT_Services_Draft_RFP_v3.docx',
-    pageCount: 52,
-    completedAt: new Date('2025-12-14T15:47:00'),
-    summary: 'Your RFP has been analyzed for compliance and quality issues. We identified 23 items that need attention across 4 categories.',
-    actionItems: [
-      {
-        icon: 'warning' as const,
-        text: '11 items require immediate action (HIGH priority)'
-      },
-      {
-        icon: 'bulb' as const,
-        text: '12 items are recommendations (MEDIUM/LOW priority)'
-      }
-    ],
-    nextSteps: [
-      'Review HIGH priority risks first (8 items need immediate fixes)',
-      'Address small business accessibility score (currently 3/10)',
-      'Prepare answers for clarifying questions vendors will ask',
-      'Download full compliance report for stakeholder review'
-    ]
-  };
 
 export default function SolicitationsDashboard() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const documentId = searchParams.get('documentId');
+
+  // Fetch and transform document analysis data
+  const {
+    document,
+    summary,
+    actionItems,
+    nextSteps,
+    summaryText,
+    accessibilityBadge,
+    risksBadge,
+    isLoading,
+    error,
+  } = useDocumentAnalysis(documentId);
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <PageMain>
+        <div className="flex min-h-screen items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-800 dark:border-red-600 mx-auto mb-4"></div>
+            <p className="text-gray-600 dark:text-gray-400">Loading analysis...</p>
+          </div>
+        </div>
+      </PageMain>
+    );
+  }
+
+  // Error state
+  if (error || !document || !summary) {
+    return (
+      <PageMain>
+        <div className="flex min-h-screen items-center justify-center">
+          <div className="max-w-md w-full mx-4">
+            <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg border border-red-200 dark:border-red-800 p-8">
+              <h1 className="text-2xl font-bold text-red-600 dark:text-red-400 mb-4">Error</h1>
+              <p className="text-gray-700 dark:text-gray-300 mb-6">
+                {error || 'Analysis results not available'}
+              </p>
+              <button
+                onClick={() => router.push('/upload')}
+                className="w-full px-6 py-3 bg-red-800 hover:bg-red-900 dark:bg-red-900 dark:hover:bg-red-950 text-white rounded-lg font-medium transition-colors"
+              >
+                Upload New Document
+              </button>
+            </div>
+          </div>
+        </div>
+      </PageMain>
+    );
+  }
 
   return (
     <PageMain>
       <div className="max-w-6xl mx-auto">
         {/* Dashboard Title */}
         <DashboardTitle
-          title={analysisData.title}
-          filename={analysisData.filename}
-          pageCount={analysisData.pageCount}
-          completedAt={analysisData.completedAt}
+          title={`${document.filename} - Analysis Complete`}
+          filename={document.filename}
+          pageCount={0} // TODO: Extract from metadata if available
+          completedAt={new Date(document.analysis_results!.analyzed_at)}
         />
 
         {/* Overview Section */}
         <DashboardOverview
-          summary={analysisData.summary}
-          actionItems={analysisData.actionItems}
+          summary={summaryText}
+          actionItems={actionItems}
         />
 
         {/* Analysis Results Section */}
@@ -66,50 +100,48 @@ export default function SolicitationsDashboard() {
             <ScopeCard
               variant="score"
               title="Small Business Accessibility"
-              value={3}
+              value={summary.accessibilityScore}
               maxValue={10}
-              badge={{
-                text: 'Needs improvement',
-                variant: 'warning'
-              }}
+              badge={accessibilityBadge}
+              href={`/dashboard/small-business-accessibility?documentId=${documentId}`}
             />
 
             {/* Identified Risks Card */}
             <ScopeCard
               variant="risks"
               title="Identified Risks"
-              value={11}
+              value={summary.totalRisks}
               riskBreakdown={{
-                high: 8,
-                medium: 3,
-                low: 0
+                high: summary.highRisks,
+                medium: summary.mediumRisks,
+                low: summary.lowRisks
               }}
-              badge={{
-                text: 'Action required',
-                variant: 'action'
-              }}
+              badge={risksBadge}
+              href={`/dashboard/identified-risks?documentId=${documentId}`}
             />
 
             {/* Clarifying Questions Card */}
             <ScopeCard
               variant="questions"
               title="Clarifying Questions"
-              value={15}
+              value={summary.totalQuestions}
               subtitle="questions identified"
+              href={`/dashboard/clarifying-questions?documentId=${documentId}`}
             />
 
             {/* Subcontracting Opportunities Card */}
             <ScopeCard
               variant="opportunities"
               title="Subcontracting Opportunities"
-              value={9}
+              value={summary.totalOpportunities}
               subtitle="opportunities identified"
+              href={`/dashboard/subcontracting-opportunities?documentId=${documentId}`}
             />
           </PageGrid>
         </div>
 
         {/* Next Steps Section */}
-        <NextSteps steps={analysisData.nextSteps} />
+        <NextSteps steps={nextSteps} />
 
         {/* Footer Buttons */}
         <DashboardFooter />

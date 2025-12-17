@@ -42,13 +42,13 @@ export default function ProcessingPage({ params }: ProcessingPageProps) {
         setDocument(data);
 
         // Check if already completed
-        if (data.status === 'complete') {
-          router.push(DASHBOARD_PATH);
+        if (data.status === 'completed') {
+          router.push(`${DASHBOARD_PATH}?documentId=${documentId}`);
           return;
         }
 
         // Check if failed
-        if (data.status === 'error') {
+        if (data.status === 'failed') {
           setError(data.error_message || 'Analysis failed');
         }
       } catch (err) {
@@ -64,12 +64,12 @@ export default function ProcessingPage({ params }: ProcessingPageProps) {
 
   // Handle completion
   useEffect(() => {
-    if (isComplete) {
+    if (isComplete && documentId) {
       setTimeout(() => {
-        router.push(DASHBOARD_PATH);
+        router.push(`${DASHBOARD_PATH}?documentId=${documentId}`);
       }, 1000);
     }
-  }, [isComplete, router]);
+  }, [isComplete, documentId, router]);
 
   // Handle progress errors
   useEffect(() => {

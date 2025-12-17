@@ -12,7 +12,7 @@ export interface Document {
   id: string;
   filename: string;
   storage_path: string;
-  status: 'pending' | 'processing' | 'complete' | 'error';
+  status: 'pending' | 'processing' | 'completed' | 'failed';
   small_business_accessible?: boolean;
   small_business_reasoning?: string;
   identified_risks?: JsonObject;
@@ -28,7 +28,7 @@ export interface Document {
 export interface CreateDocumentInput {
   filename: string;
   storage_path: string;
-  status: 'pending' | 'processing' | 'complete' | 'error';
+  status: 'pending' | 'processing' | 'completed' | 'failed';
 }
 
 export interface ActiveJob {
@@ -120,7 +120,7 @@ export class DocumentRepository {
 
   async updateStatus(
     id: string,
-    status: 'pending' | 'processing' | 'complete' | 'error'
+    status: 'pending' | 'processing' | 'completed' | 'failed'
   ): Promise<Document> {
     try {
       const { data, error } = await this.client
@@ -138,6 +138,28 @@ export class DocumentRepository {
     } catch(error) {
       if (error instanceof DatabaseError) throw error;
 
+      throw new DatabaseError(UNEXPECTED_DB_ERROR_MSG, error);
+    }
+  }
+
+  async findLatestCompleted(): Promise<Document | null> {
+    try {
+      const { data, error } = await this.client
+        .from(DOCUMENTS_TABLE)
+        .select()
+        .eq('status', 'completed')
+        .not('analysis_results', 'is', null)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        throw new DatabaseError('Failed to find latest completed document', error);
+      }
+
+      return data;
+    } catch (error) {
+      if (error instanceof DatabaseError) throw error;
       throw new DatabaseError(UNEXPECTED_DB_ERROR_MSG, error);
     }
   }

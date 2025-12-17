@@ -57,6 +57,8 @@ type ScopeCardProps = {
   maxValue?: number; // For score variant (e.g., 3/10)
   subtitle?: string; // For questions and opportunities variants
   riskBreakdown?: RiskBreakdown; // For risks variant
+  badge?: { text: string; variant: string }; // Optional badge
+  href?: string; // Optional custom URL (overrides default)
   className?: string;
 };
 
@@ -67,6 +69,8 @@ export function ScopeCard({
   maxValue,
   subtitle,
   riskBreakdown,
+  badge,
+  href,
   className
 }: ScopeCardProps) {
   // Icon selection based on variant
@@ -88,8 +92,8 @@ export function ScopeCard({
   // Calculate progress percentage for score variant
   const progressPercentage = maxValue ? (value / maxValue) * 100 : 0;
 
-  // Get the URL for this card variant
-  const detailUrl = `/dashboard/${variantToUrlMap[variant]}`;
+  // Get the URL for this card variant (use custom href if provided)
+  const detailUrl = href || `/dashboard/${variantToUrlMap[variant]}`;
 
   return (
     <Link href={detailUrl}>
