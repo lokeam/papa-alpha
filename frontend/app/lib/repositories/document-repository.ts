@@ -1,6 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
 import { DatabaseError } from '@/app/lib/utils/error-handler';
 
+// JSON types for JSONB columns
+export type JsonValue = string | number | boolean | null | JsonObject | JsonArray;
+export interface JsonObject {
+  [key: string]: JsonValue;
+}
+export type JsonArray = JsonValue[];
+
 export interface Document {
   id: string;
   filename: string;
@@ -8,10 +15,10 @@ export interface Document {
   status: 'pending' | 'processing' | 'complete' | 'error';
   small_business_accessible?: boolean;
   small_business_reasoning?: string;
-  identified_risks?: any;
-  clarifying_questions?: any;
-  subcontracting_opportunities?: any;
-  raw_llm_response?: any;
+  identified_risks?: JsonObject;
+  clarifying_questions?: JsonObject;
+  subcontracting_opportunities?: JsonObject;
+  raw_llm_response?: JsonObject;
   error_message?: string;
   created_at: string;
   updated_at: string;
@@ -22,6 +29,13 @@ export interface CreateDocumentInput {
   filename: string;
   storage_path: string;
   status: 'pending' | 'processing' | 'complete' | 'error';
+}
+
+export interface ActiveJob {
+  id: string;
+  filename: string;
+  status: 'pending' | 'processing';
+  created_at: string;
 }
 
 const ZERO_OR_MULTIPLE_ROW_ERROR_CODE = 'PGRST116';
@@ -54,6 +68,27 @@ export class DocumentRepository {
 
       return document;
     } catch (error) {
+      if (error instanceof DatabaseError) throw error;
+      throw new DatabaseError(UNEXPECTED_DB_ERROR_MSG, error);
+    }
+  }
+
+  async findActiveJob(): Promise<ActiveJob | null> {
+    try {
+      const { data, error } = await this.client
+        .from(DOCUMENTS_TABLE)
+        .select('id, filename, status, created_at')
+        .in('status', ['pending', 'processing'])
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        throw new DatabaseError('Failed to find active job', error);
+      }
+
+      return data;
+    } catch(error) {
       if (error instanceof DatabaseError) throw error;
       throw new DatabaseError(UNEXPECTED_DB_ERROR_MSG, error);
     }
