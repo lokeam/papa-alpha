@@ -24,9 +24,9 @@ frontend/next-env.d.ts
 #==========================================
 # Workers (Python)
 #==========================================
-workers/__pycache__/
-workers/*.py[cod]
-workers/*$py.class
+workers/**/__pycache__/
+workers/**/*.py[cod]
+workers/**/*$py.class
 workers/*.so
 workers/.Python
 workers/venv/

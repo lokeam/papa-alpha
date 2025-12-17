@@ -24,8 +24,7 @@
 #
 # ---------------------------------------------------------------------------
 
-.PHONY: help setup start stop restart logs health clean reset supabase-start supabase-stop supabase-reset frontend-dev worker-logs redis-logs worker-build worker-start worker-stop worker-restart worker-shell check-ports
-
+.PHONY: help setup start stop restart logs health clean reset supabase-start supabase-stop supabase-reset frontend-dev worker-logs redis-logs redis-subscribe dev-logs test-progress worker-build worker-start worker-stop worker-restart worker-shell check-ports
 # Colors
 BLUE := \033[34m
 GREEN := \033[32m
@@ -71,6 +70,11 @@ help:
 	@echo "  make worker-shell       - Open shell in worker container"
 	@echo "  make redis-logs         - View Redis logs"
 	@echo "  make redis-ui           - Open Redis Commander in browser"
+	@echo "$(GREEN)Progress Tracking Debug:$(RESET)"
+	@echo " make redis-subscribe - Watch real-time progress updates"
+	@echo " make dev-logs - Watch worker logs + progress together"
+	@echo " make test-progress - Validate progress message format"
+	@echo ""
 	@echo ""
 	@echo "$(GREEN)Cleanup:$(RESET)"
 	@echo "  make clean              - Remove containers (preserves data)"
@@ -236,6 +240,22 @@ redis-logs:
 redis-ui:
 	@echo "$(BLUE)Opening Redis Commander...$(RESET)"
 	@open http://localhost:8081 || echo "$(YELLOW)Open http://localhost:8081 in your browser$(RESET)"
+
+# ---------------------------------------------------------------------------
+# Progress Tracking Debug Commands
+# ---------------------------------------------------------------------------
+redis-subscribe:
+	@echo "$(BLUE)📡 Subscribing to progress:* (Ctrl+C to exit)$(RESET)"
+	@docker exec -it papa-alpha-redis redis-cli PSUBSCRIBE 'progress:*'
+
+dev-logs:
+	@echo "$(BLUE)📊 Watching worker logs + progress updates$(RESET)"
+	@echo "$(YELLOW)Press Ctrl+C to exit$(RESET)"
+	@docker compose logs -f workers & docker exec -it papa-alpha-redis redis-cli PSUBSCRIBE 'progress:*'
+
+test-progress:
+	@echo "$(BLUE)🧪 Validating progress tracking...$(RESET)"
+	@cd workers && python scripts/validate_progress.py
 
 # ---------------------------------------------------------------------------
 # Worker Commands
