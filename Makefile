@@ -24,7 +24,7 @@
 #
 # ---------------------------------------------------------------------------
 
-.PHONY: help setup start stop restart logs health clean reset supabase-start supabase-stop supabase-reset frontend-dev worker-logs redis-logs redis-subscribe dev-logs test-progress worker-build worker-start worker-stop worker-restart worker-shell check-ports
+.PHONY: help setup start stop restart logs health clean reset supabase-start supabase-stop supabase-reset types-generate frontend-dev worker-logs redis-logs redis-subscribe dev-logs test-progress worker-build worker-start worker-stop worker-restart worker-shell check-ports
 # Colors
 BLUE := \033[34m
 GREEN := \033[32m
@@ -55,6 +55,7 @@ help:
 	@echo "  make supabase-start     - Start Supabase only"
 	@echo "  make supabase-stop      - Stop Supabase only"
 	@echo "  make supabase-reset     - Reset Supabase database"
+	@echo "  make types-generate     - Regenerate TypeScript types from database"
 	@echo "  make docker-up          - Start Docker services only (worker + redis)"
 	@echo "  make docker-down        - Stop Docker services only"
 	@echo "  make frontend-dev       - Start frontend dev server only"
@@ -184,10 +185,16 @@ supabase-reset:
 	echo; \
 	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
 		supabase db reset && \
-		echo "$(GREEN)Supabase database reset$(RESET)"; \
+		echo "$(GREEN)Supabase database reset$(RESET)" && \
+		$(MAKE) types-generate; \
 	else \
 		echo "$(BLUE)Cancelled$(RESET)"; \
 	fi
+
+types-generate:
+	@echo "$(BLUE)Generating TypeScript types from Supabase schema...$(RESET)"
+	@cd frontend && npm run types:generate
+	@echo "$(GREEN)✓ Types generated at frontend/app/lib/types/database.ts$(RESET)"
 
 # ---------------------------------------------------------------------------
 # Docker Commands
