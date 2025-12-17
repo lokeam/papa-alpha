@@ -8,32 +8,26 @@ import os
 # ============================================================================
 
 
-# Model names
-LLM_MODEL_GPT4_TURBO = "gpt-4-turbo-preview"
-LLM_MODEL_GPT4 = "gpt-4"
-LLM_MODEL_GPT35 = "gpt-3.5-turbo"
-DEFAULT_LLM_MODEL = LLM_MODEL_GPT4_TURBO
+# Model selection
+DEFAULT_LLM_MODEL = "gpt-4o-mini"
+LLM_MODEL = "gpt-4o-mini"  # Cheapest option: $0.150/1M input, $0.600/1M output
 
-# Pricing (USD per 1000 tokens)
+# Pricing (USD per 1M tokens)
 # Source: OpenAI pricing as of Dec 2024
 LLM_PRICING = {
-    LLM_MODEL_GPT4_TURBO: {
-        "input": 0.01 / 1000,
-        "output": 0.03 / 1000,
-    },
-    "gpt-4-turbo": {  # Note: using alias for compatibility
-        "input": 0.01 / 1000,
-        "output": 0.03 / 1000,
-    },
-    LLM_MODEL_GPT4: {
-        "input": 0.03 / 1000,
-        "output": 0.06 / 1000,
-    },
-    LLM_MODEL_GPT35: {
-        "input": 0.0005 / 1000,
-        "output": 0.0015 / 1000,
+    "gpt-4o-mini": {
+        "input": 0.150 / 1_000_000,   # $0.150 per 1M tokens
+        "output": 0.600 / 1_000_000,  # $0.600 per 1M tokens
     },
 }
+
+# Retry configuration
+MAX_RETRIES = 5
+RETRY_BASE_DELAY = 1  # seconds
+RETRY_MAX_DELAY = 32  # seconds
+
+# API timeouts
+LLM_TIMEOUT = 120  # seconds
 
 # ============================================================================
 # Environment Variables
