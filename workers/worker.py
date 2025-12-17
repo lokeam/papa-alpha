@@ -14,6 +14,7 @@ from config import (
     QUEUE_NAME,
     QUEUE_POLL_TIMEOUT,
     STORAGE_BUCKET,
+    DEFAULT_LLM_MODEL,
 )
 from services import PDFService, StorageService, LLMService
 from utils import ProgressPublisher
@@ -104,13 +105,26 @@ class RFPWorker:
             )
 
             # Step 4: Prepare LLM usage metrics
+            # Calculate input/output tokens from cost breakdown
+            input_tokens = 0
+            output_tokens = 0
+            for category_usage in [
+                analysis_results.cost_breakdown.risks,
+                analysis_results.cost_breakdown.accessibility,
+                analysis_results.cost_breakdown.questions,
+                analysis_results.cost_breakdown.subcontracting,
+            ]:
+                if category_usage:
+                    input_tokens += category_usage.input_tokens
+                    output_tokens += category_usage.output_tokens
+
             llm_usage = {
                 "total_tokens": analysis_results.total_tokens,
-                "input_tokens": analysis_results.total_input_tokens,
-                "output_tokens": analysis_results.total_output_tokens,
+                "input_tokens": input_tokens,
+                "output_tokens": output_tokens,
                 "total_cost_usd": analysis_results.total_cost_usd,
                 "processing_time_seconds": analysis_results.processing_time_seconds,
-                "model": analysis_results.model,
+                "model": DEFAULT_LLM_MODEL,
                 "categories_completed": analysis_results.get_success_rate(),
                 "partial_results": analysis_results.partial_results,
             }

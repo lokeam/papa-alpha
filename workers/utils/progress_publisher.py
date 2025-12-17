@@ -57,8 +57,8 @@ class ProgressPublisher:
             # Publish to Redis channel (fire-and-forget)
             self.redis.publish(self.channel, json.dumps(payload))
 
-            logger.debug(
-                f"Published progress: {step} ({progress}%) to {self.channel}"
+            logger.info(
+                f"📡 Progress: {step} ({progress}%) → {self.channel}"
             )
 
         except Exception as e:
@@ -81,7 +81,7 @@ class ProgressPublisher:
             }
 
             self.redis.publish(self.channel, json.dumps(payload))
-            logger.debug(f"Published error to {self.channel}")
+            logger.info(f"📡 Error published to {self.channel}")
 
         except Exception as e:
             logger.warning(f"Failed to publish error: {e}")
