@@ -1,6 +1,9 @@
 'use client';
 import { use, useState } from 'react';
-import { notFound } from 'next/navigation';
+import { notFound, useSearchParams } from 'next/navigation';
+import { useDocumentAnalysis } from '@/app/lib/hooks/useDocumentAnalysis';
+import type { AnalysisResults, Risk as BackendRisk, PredictedQuestion, SubcontractingOpportunity } from '@/app/lib/types';
+import type { Risk as ComponentRisk, Question as ComponentQuestion, Opportunity as ComponentOpportunity, AccessibilityScore as ComponentAccessibilityScore } from './types';
 import { PageMain } from '@/components/layout/page-main';
 
 // Components
@@ -14,9 +17,6 @@ import { FilterBar } from './components/FilterBar';
 import { AccordionSection } from './components/AccordionSection';
 import { ItemCard } from './components/ItemCard';
 import { TipBox } from './components/TipBox';
-
-// Mock Data
-import { mockRisks, mockQuestions, mockOpportunities, mockAccessibilityScore } from './mockData';
 
 // Valid scope types
 const VALID_SCOPES = [
@@ -36,6 +36,66 @@ const scopeDisplayNames: Record<ScopeType, string> = {
   'subcontracting-opportunities': 'Subcontracting Opportunities'
 };
 
+// Adapter functions to transform backend types to component types
+function adaptRiskToComponent(risk: BackendRisk): ComponentRisk {
+  return {
+    id: risk.id,
+    title: risk.issue_description.substring(0, 100) + '...',
+    section: risk.location.section,
+    page: parseInt(risk.location.page) || 0,
+    preview: risk.exact_quote,
+    priority: risk.severity.toLowerCase() as 'high' | 'medium' | 'low',
+    problem: risk.issue_description,
+    whyItMatters: [risk.reasoning, risk.impact_if_unresolved],
+    suggestedFix: risk.suggested_fix,
+    impact: {
+      complianceRisk: risk.severity.toLowerCase() as 'high' | 'medium' | 'low',
+      effortToFix: 'Medium',
+      protestLikelihood: risk.severity === 'HIGH' ? 'High' : 'Low'
+    }
+  };
+}
+
+function adaptQuestionToComponent(q: PredictedQuestion): ComponentQuestion {
+  return {
+    id: q.id,
+    title: q.predicted_question,
+    section: q.triggered_by.location,
+    page: 0,
+    preview: q.triggered_by.exact_quote,
+    priority: q.urgency.toLowerCase() as 'high' | 'medium' | 'low',
+    question: q.predicted_question,
+    context: q.triggered_by.exact_quote,
+    whyAsking: q.confusion_analysis.possible_interpretations,
+    suggestedApproach: q.suggested_fix || '',
+    impact: {
+      clarityImprovement: q.urgency.toLowerCase() as 'high' | 'medium' | 'low',
+      vendorConfusion: q.confusion_analysis.why_confusing,
+      responseQuality: 'Medium'
+    }
+  };
+}
+
+function adaptOpportunityToComponent(opp: SubcontractingOpportunity): ComponentOpportunity {
+  return {
+    id: opp.id,
+    title: opp.area.substring(0, 100) + (opp.area.length > 100 ? '...' : ''),
+    section: opp.location,
+    page: 0,
+    preview: opp.rfp_text,
+    priority: 'medium',
+    description: opp.reasoning,
+    benefits: opp.suitable_business_types,
+    suggestedLanguage: opp.rfp_text,
+    naicsCode: opp.naics_code,
+    impact: {
+      smallBusinessAccess: 'high',
+      competitionIncrease: 'Medium',
+      costSavings: opp.estimated_value
+    }
+  };
+}
+
 interface ScopePageProps {
   params: Promise<{
     scope: string;
@@ -44,6 +104,11 @@ interface ScopePageProps {
 
 export default function ScopeDetailPage({ params }: ScopePageProps) {
   const { scope } = use(params);
+  const searchParams = useSearchParams();
+  const documentId = searchParams.get('documentId');
+
+  // Fetch document analysis data
+  const { analysis, isLoading, error } = useDocumentAnalysis(documentId);
 
   // Validate scope - if invalid, show 404
   if (!VALID_SCOPES.includes(scope as ScopeType)) {
@@ -51,6 +116,34 @@ export default function ScopeDetailPage({ params }: ScopePageProps) {
   }
 
   const displayName = scopeDisplayNames[scope as ScopeType];
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <PageMain>
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center py-12">
+            <p className="text-gray-600 dark:text-zinc-400">Loading analysis...</p>
+          </div>
+        </div>
+      </PageMain>
+    );
+  }
+
+  // Error state
+  if (error || !analysis) {
+    return (
+      <PageMain>
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center py-12">
+            <p className="text-red-600 dark:text-red-400">
+              {error || 'No analysis data available'}
+            </p>
+          </div>
+        </div>
+      </PageMain>
+    );
+  }
 
   return (
     <PageMain>
@@ -68,16 +161,16 @@ export default function ScopeDetailPage({ params }: ScopePageProps) {
         {/* Content based on scope type */}
         <div className="space-y-6">
           {scope === 'small-business-accessibility' && (
-            <SmallBusinessContent />
+            <SmallBusinessContent analysis={analysis} />
           )}
           {scope === 'identified-risks' && (
-            <IdentifiedRisksContent />
+            <IdentifiedRisksContent analysis={analysis} />
           )}
           {scope === 'clarifying-questions' && (
-            <ClarifyingQuestionsContent />
+            <ClarifyingQuestionsContent analysis={analysis} />
           )}
           {scope === 'subcontracting-opportunities' && (
-            <SubcontractingContent />
+            <SubcontractingContent analysis={analysis} />
           )}
         </div>
       </div>
@@ -89,17 +182,29 @@ export default function ScopeDetailPage({ params }: ScopePageProps) {
 // SMALL BUSINESS ACCESSIBILITY CONTENT
 // ============================================================================
 
-function SmallBusinessContent() {
+function SmallBusinessContent({ analysis }: { analysis: AnalysisResults }) {
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
 
   const toggleSection = (section: string) => {
     setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
   };
 
+  // Extract accessibility data from analysis
+  const accessibilityData = analysis.accessibility?.accessibility_analysis;
+  const finalScore = accessibilityData?.final_score || 0;
+  const score: ComponentAccessibilityScore = {
+    overallScore: finalScore,
+    maxScore: 10,
+    grade: finalScore >= 9 ? 'A' : finalScore >= 7 ? 'B' : finalScore >= 5 ? 'C' : finalScore >= 3 ? 'D' : 'F',
+    categories: [],
+    summary: accessibilityData?.rating || 'Unknown',
+    criticalIssues: analysis.accessibility?.barriers?.map(b => b.exact_quote) || []
+  };
+
   return (
     <div className="max-w-4xl mx-auto">
       <AccessibilityDetailContent
-        score={mockAccessibilityScore}
+        score={score}
         expandedSections={expandedSections}
         onToggleSection={toggleSection}
       />
@@ -111,8 +216,12 @@ function SmallBusinessContent() {
 // IDENTIFIED RISKS CONTENT
 // ============================================================================
 
-function IdentifiedRisksContent() {
-  const [selectedRisk, setSelectedRisk] = useState<typeof mockRisks[0] | null>(null);
+function IdentifiedRisksContent({ analysis }: { analysis: AnalysisResults }) {
+  // Transform backend risks to component format
+  const risks = analysis.risks?.risks || [];
+  const transformedRisks: ComponentRisk[] = risks.map(adaptRiskToComponent);
+
+  const [selectedRisk, setSelectedRisk] = useState<ComponentRisk | null>(null);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
   const [expandedAccordions, setExpandedAccordions] = useState<Record<string, boolean>>({
     high: true,
@@ -120,9 +229,15 @@ function IdentifiedRisksContent() {
     low: false
   });
 
-  const highRisks = mockRisks.filter(r => r.priority === 'high');
-  const mediumRisks = mockRisks.filter(r => r.priority === 'medium');
-  const lowRisks = mockRisks.filter(r => r.priority === 'low');
+  const highRisks = transformedRisks.filter(r => r.priority === 'high');
+  const mediumRisks = transformedRisks.filter(r => r.priority === 'medium');
+  const lowRisks = transformedRisks.filter(r => r.priority === 'low');
+
+  const summary = analysis.risks?.analysis_summary;
+  const totalRisks = summary?.total_risks_found || 0;
+  const highCount = summary?.high_severity || 0;
+  const mediumCount = summary?.medium_severity || 0;
+  const lowCount = summary?.low_severity || 0;
 
   const toggleSection = (section: string) => {
     setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
@@ -139,13 +254,13 @@ function IdentifiedRisksContent() {
       listContent={
         <>
           <SummaryCard
-            title="11 Risks Found"
+            title={`${totalRisks} Risk${totalRisks !== 1 ? 's' : ''} Found`}
             statusLine={
               <>
-                Status: <span className="text-rose-600 dark:text-rose-400">⚠️ 8 High</span> • 3 Medium • 0 Low
+                Status: <span className="text-rose-600 dark:text-rose-400">⚠️ {highCount} High</span> • {mediumCount} Medium • {lowCount} Low
               </>
             }
-            progressLine="✅ 0 of 11 completed"
+            progressLine={`✅ 0 of ${totalRisks} completed`}
             nextAction="Next: Review HIGH priority items to prevent bid protests"
           />
 
@@ -268,8 +383,12 @@ function IdentifiedRisksContent() {
 // CLARIFYING QUESTIONS CONTENT
 // ============================================================================
 
-function ClarifyingQuestionsContent() {
-  const [selectedQuestion, setSelectedQuestion] = useState<typeof mockQuestions[0] | null>(null);
+function ClarifyingQuestionsContent({ analysis }: { analysis: AnalysisResults }) {
+  // Transform backend questions to component format
+  const questions = analysis.questions?.questions || [];
+  const transformedQuestions: ComponentQuestion[] = questions.map(adaptQuestionToComponent);
+
+  const [selectedQuestion, setSelectedQuestion] = useState<ComponentQuestion | null>(null);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
   const [expandedAccordions, setExpandedAccordions] = useState<Record<string, boolean>>({
     high: true,
@@ -277,9 +396,15 @@ function ClarifyingQuestionsContent() {
     low: false
   });
 
-  const highQuestions = mockQuestions.filter(q => q.priority === 'high');
-  const mediumQuestions = mockQuestions.filter(q => q.priority === 'medium');
-  const lowQuestions = mockQuestions.filter(q => q.priority === 'low');
+  const highQuestions = transformedQuestions.filter(q => q.priority === 'high');
+  const mediumQuestions = transformedQuestions.filter(q => q.priority === 'medium');
+  const lowQuestions = transformedQuestions.filter(q => q.priority === 'low');
+
+  const totalQuestions = analysis.questions?.questions_predicted || 0;
+  const urgencyBreakdown = analysis.questions?.urgency_breakdown;
+  const highCount = urgencyBreakdown?.high || 0;
+  const mediumCount = urgencyBreakdown?.medium || 0;
+  const lowCount = urgencyBreakdown?.low || 0;
 
   const toggleSection = (section: string) => {
     setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
@@ -296,13 +421,13 @@ function ClarifyingQuestionsContent() {
       listContent={
         <>
           <SummaryCard
-            title="15 Questions Identified"
+            title={`${totalQuestions} Question${totalQuestions !== 1 ? 's' : ''} Identified`}
             statusLine={
               <>
-                Priority: <span className="text-rose-600 dark:text-rose-400">⚠️ 2 High</span> • 8 Medium • 5 Low
+                Priority: <span className="text-rose-600 dark:text-rose-400">⚠️ {highCount} High</span> • {mediumCount} Medium • {lowCount} Low
               </>
             }
-            progressLine="✅ 0 of 15 addressed"
+            progressLine={`✅ 0 of ${totalQuestions} addressed`}
             nextAction="Next: Address HIGH priority questions before RFP release"
           />
 
@@ -425,8 +550,12 @@ function ClarifyingQuestionsContent() {
 // SUBCONTRACTING OPPORTUNITIES CONTENT
 // ============================================================================
 
-function SubcontractingContent() {
-  const [selectedOpportunity, setSelectedOpportunity] = useState<typeof mockOpportunities[0] | null>(null);
+function SubcontractingContent({ analysis }: { analysis: AnalysisResults }) {
+  // Transform backend opportunities to component format
+  const opportunities = analysis.subcontracting?.opportunities || [];
+  const transformedOpportunities: ComponentOpportunity[] = opportunities.map(adaptOpportunityToComponent);
+
+  const [selectedOpportunity, setSelectedOpportunity] = useState<ComponentOpportunity | null>(null);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
   const [expandedAccordions, setExpandedAccordions] = useState<Record<string, boolean>>({
     high: true,
@@ -434,9 +563,12 @@ function SubcontractingContent() {
     low: false
   });
 
-  const highOpportunities = mockOpportunities.filter(o => o.priority === 'high');
-  const mediumOpportunities = mockOpportunities.filter(o => o.priority === 'medium');
-  const lowOpportunities = mockOpportunities.filter(o => o.priority === 'low');
+  const highOpportunities = transformedOpportunities.filter(o => o.priority === 'high');
+  const mediumOpportunities = transformedOpportunities.filter(o => o.priority === 'medium');
+  const lowOpportunities = transformedOpportunities.filter(o => o.priority === 'low');
+
+  const subAnalysis = analysis.subcontracting?.subcontracting_analysis;
+  const totalOpportunities = subAnalysis?.opportunities_found || 0;
 
   const toggleSection = (section: string) => {
     setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
@@ -453,13 +585,13 @@ function SubcontractingContent() {
       listContent={
         <>
           <SummaryCard
-            title="9 Opportunities Identified"
+            title={`${totalOpportunities} Opportunit${totalOpportunities !== 1 ? 'ies' : 'y'} Identified`}
             statusLine={
               <>
-                Priority: <span className="text-green-600 dark:text-green-400">✨ 2 High</span> • 5 Medium • 2 Low
+                Priority: <span className="text-green-600 dark:text-green-400">✨ {highOpportunities.length} High</span> • {mediumOpportunities.length} Medium • {lowOpportunities.length} Low
               </>
             }
-            progressLine="✅ 0 of 9 implemented"
+            progressLine={`✅ 0 of ${totalOpportunities} implemented`}
             nextAction="Next: Add HIGH priority opportunities to maximize small business participation"
           />
 

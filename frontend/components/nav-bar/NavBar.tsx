@@ -30,7 +30,7 @@ const DesktopNav = ({
     <div className="hidden items-center justify-between px-4 py-4 md:flex">
       {/* Site Logo */}
       <Link href="/" className="flex items-center gap-2">
-        <BankIcon className='h-8 w-8'/>
+        <BankIcon className='h-7 w-7'/>
       </Link>
 
       <div className="flex items-center gap-10">

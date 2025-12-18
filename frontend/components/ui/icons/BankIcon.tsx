@@ -8,25 +8,22 @@ export function BankIcon({ className }: BankIconProps) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      width={24}
-      height={24}
+      width="24"
+      height="24"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth={1.75}
+      strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
       className={cn("icon icon-tabler icons-tabler-outline icon-tabler-building-bank", className)}
     >
-      <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-      <path d="M3 21l18 0" />
-      <path d="M3 10l18 0" />
-      <path d="M5 6l7 -3l7 3" />
-      <path d="M4 10l0 11" />
-      <path d="M20 10l0 11" />
-      <path d="M8 14l0 3" />
-      <path d="M12 14l0 3" />
-      <path d="M16 14l0 3" />
+      <path d="M10 18v-7"/>
+      <path d="M11.12 2.198a2 2 0 0 1 1.76.006l7.866 3.847c.476.233.31.949-.22.949H3.474c-.53 0-.695-.716-.22-.949z"/>
+      <path d="M14 18v-7"/>
+      <path d="M18 18v-7"/>
+      <path d="M3 22h18"/>
+      <path d="M6 18v-7"/>
     </svg>
   );
 }

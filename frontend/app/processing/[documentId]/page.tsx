@@ -145,7 +145,7 @@ export default function ProcessingPage({ params }: ProcessingPageProps) {
             <div className="mb-4">
               <div className="w-full bg-gray-200 dark:bg-zinc-800 rounded-full h-3 overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-red-600 to-red-800 dark:from-red-700 dark:to-red-900 transition-all duration-500 ease-in-out"
+                  className="h-full bg-linear-to-r from-red-600 to-red-800 dark:from-red-700 dark:to-red-900 transition-all duration-500 ease-in-out"
                   style={{ width: `${progress}%` }}
                 ></div>
               </div>

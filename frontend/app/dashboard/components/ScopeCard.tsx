@@ -96,10 +96,10 @@ export function ScopeCard({
   const detailUrl = href || `/dashboard/${variantToUrlMap[variant]}`;
 
   return (
-    <Link href={detailUrl}>
+    <Link href={detailUrl} className="col-span-1 h-full">
       <div
         className={cn(
-          "relative rounded-xl border bg-white dark:bg-zinc-900",
+          "h-full flex flex-col relative rounded-xl border bg-white dark:bg-zinc-900",
           "border-gray-200 dark:border-zinc-800",
           "p-6 transition-all duration-300 ease-in-out",
           // Hover effects:
