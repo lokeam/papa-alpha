@@ -80,10 +80,10 @@ export default function ProcessingPage({ params }: ProcessingPageProps) {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-zinc-950">
+      <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-800 dark:border-red-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
     );
@@ -91,14 +91,14 @@ export default function ProcessingPage({ params }: ProcessingPageProps) {
 
   if (error) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-zinc-950">
+      <div className="flex min-h-screen items-center justify-center">
         <div className="max-w-md w-full mx-4">
-          <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg border border-red-200 dark:border-red-800 p-8">
-            <h1 className="text-2xl font-bold text-red-600 dark:text-red-400 mb-4">Error</h1>
-            <p className="text-gray-700 dark:text-gray-300 mb-6">{error}</p>
+          <div className="bg-card rounded-lg shadow-lg border border-destructive/30 p-8">
+            <h1 className="text-2xl font-bold text-destructive mb-4">Error</h1>
+            <p className="text-foreground mb-6">{error}</p>
             <button
               onClick={() => router.push('/upload')}
-              className="w-full px-6 py-3 bg-red-800 hover:bg-red-900 dark:bg-red-900 dark:hover:bg-red-950 text-white rounded-lg font-medium transition-colors"
+              className="w-full px-6 py-3 bg-primary hover:bg-primary/90 text-white rounded-lg font-medium transition-colors"
             >
               Upload New Document
             </button>
@@ -113,31 +113,31 @@ export default function ProcessingPage({ params }: ProcessingPageProps) {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-zinc-950 font-sans">
+    <div className="flex min-h-screen items-center justify-center font-sans">
       <main className="w-full max-w-2xl px-6 py-12">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
+          <h1 className="text-4xl font-bold text-foreground mb-2">
             Analyzing Your Document
           </h1>
-          <p className="text-gray-600 dark:text-gray-400">
+          <p className="text-muted-foreground">
             Please wait while we process your RFP
           </p>
         </div>
 
         {/* Processing Card */}
-        <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg border border-gray-200 dark:border-zinc-800 p-8">
+        <div className="bg-card rounded-lg shadow-lg border p-8" style={{ borderColor: 'hsl(var(--card-border))' }}>
           {/* Document Info */}
           <div className="mb-8">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            <h2 className="text-lg font-semibold text-foreground mb-2">
               Document
             </h2>
-            <p className="text-gray-700 dark:text-gray-300">{document.filename}</p>
+            <p className="text-foreground">{document.filename}</p>
           </div>
 
           {/* Progress Section */}
           <div className="mb-8">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            <h2 className="text-lg font-semibold text-foreground mb-4">
               Progress
             </h2>
 
@@ -158,9 +158,9 @@ export default function ProcessingPage({ params }: ProcessingPageProps) {
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                 </svg>
               ) : (
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-red-800 dark:border-red-600"></div>
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
               )}
-              <p className={isComplete ? "text-green-600 dark:text-green-400" : "text-gray-600 dark:text-gray-400"}>
+              <p className={isComplete ? "text-green-600 dark:text-green-400" : "text-muted-foreground"}>
                 {isComplete ? 'Analysis complete! Redirecting...' : currentStep}
               </p>
             </div>
@@ -168,7 +168,7 @@ export default function ProcessingPage({ params }: ProcessingPageProps) {
 
           {/* Info Message */}
           <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-            <p className="text-sm text-blue-800 dark:text-blue-300">
+            <p className="text-sm text-blue-900 dark:text-blue-300">
               This process typically takes 1-2 minutes. Please don&apos;t close this page.
             </p>
           </div>

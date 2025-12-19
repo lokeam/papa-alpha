@@ -13,11 +13,11 @@ export function PageMain({
   return (
     <div
       className={cn(
-        'bg-[#B8D9FF]/3 border border-border',
+        'bg-white dark:bg-[#B8D9FF]/3 border border-border shadow-page dark:shadow-none',
         'rounded-3xl',
         'peer-[.header-fixed]/header:mt-16',
         'w-full max-w-7xl mx-auto',
-        'px-16 py-24',
+        'px-16 pt-12 pb-24',
         fixed && 'fixed-main flex flex-col grow overflow-hidden'
       )}
       {...props}

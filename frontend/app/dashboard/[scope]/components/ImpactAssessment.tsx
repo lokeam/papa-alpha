@@ -10,11 +10,13 @@ type ImpactAssessmentProps = {
   metrics: ImpactMetric[];
 };
 
+import { ChartBarPopularIcon } from '@/components/ui/icons/ChartBarPopularIcon';
+
 export function ImpactAssessment({ metrics }: ImpactAssessmentProps) {
   return (
     <div>
-      <h3 className="text-lg font-semibold text-black dark:text-white mb-3">
-        📊 Impact Assessment:
+      <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
+        <ChartBarPopularIcon className="w-7 h-7 text-blue-500" /> Impact Assessment:
       </h3>
       <div className="grid grid-cols-1 gap-3">
         {metrics.map((metric, index) => (

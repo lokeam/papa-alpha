@@ -1,13 +1,11 @@
 "use client";
 
-
 import React, { useRef, useState } from "react";
 
 // Dependencies
 import { motion } from "motion/react";
 import { useDropzone } from "react-dropzone";
-
-// Utils
+import { useTheme } from "next-themes";
 import { cn } from "@/components/ui/utils";
 
 // Icons
@@ -29,9 +27,11 @@ const mainVariant = {
 const secondaryVariant = {
   initial: {
     opacity: 0,
+    borderColor: 'rgba(220, 38, 38, 0)',
   },
   animate: {
     opacity: 1,
+    borderColor: 'rgba(220, 38, 38, 1)',
   },
 };
 
@@ -43,8 +43,10 @@ export const FileUpload = ({
   onChange?: (files: File[]) => void;
 }) => {
   const [files, setFiles] = useState<File[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isHovered, setIsHovered] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { theme } = useTheme();
 
   const handleFileChange = (newFiles: File[]) => {
     // Clear previous error
@@ -109,7 +111,7 @@ export const FileUpload = ({
         onClick={handleClick}
         whileHover="animate"
         className={cn(
-          "p-10 group/file block rounded-lg cursor-pointer w-full relative overflow-hidden",
+          "p-10 group/file block rounded-lg cursor-pointer w-full relative overflow-hidden z-20",
           error && "ring-2 ring-red-500 dark:ring-red-600"
         )}
       >
@@ -120,9 +122,6 @@ export const FileUpload = ({
           onChange={(e) => handleFileChange(Array.from(e.target.files || []))}
           className="hidden"
         />
-        {/* <div className="absolute inset-0 [mask-image:radial-gradient(ellipse_at_center,white,transparent)]">
-          <GridPattern />
-        </div> */}
         <div className="flex flex-col items-center justify-center">
           <p className="relative z-20 font-sans font-bold text-neutral-700 dark:text-neutral-300 text-base">
             {files.length > 0 ? 'File Selected' : 'Upload file'}
@@ -140,9 +139,10 @@ export const FileUpload = ({
                   key={"file" + idx}
                   layoutId={idx === 0 ? "file-upload" : "file-upload-" + idx}
                   className={cn(
-                    "relative overflow-hidden z-40 bg-white dark:bg-neutral-900 flex flex-col items-start justify-start md:h-24 p-4 pr-12 mt-4 w-full mx-auto rounded-md",
-                    "shadow-sm border-2 border-gray-200 dark:border-neutral-800"
+                    "relative overflow-hidden z-30 bg-card flex flex-col items-start justify-start md:h-24 p-4 pr-12 mt-4 w-full mx-auto rounded-md",
+                    "shadow-2xl border-2"
                   )}
+                  style={{ borderColor: 'hsl(var(--card-border))' }}
                 >
                   {/* Close button */}
                   <button
@@ -150,12 +150,12 @@ export const FileUpload = ({
                       e.stopPropagation();
                       handleRemoveFile(idx);
                     }}
-                    className="absolute top-2 right-2 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-neutral-800 transition-colors"
+                    className="absolute top-2 right-2 p-1 rounded-full hover:bg-muted transition-colors"
                     aria-label="Remove file"
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5 text-gray-500 dark:text-gray-400"
+                      className="h-5 w-5 text-muted-foreground"
                       viewBox="0 0 20 20"
                       fill="currentColor"
                     >
@@ -173,7 +173,7 @@ export const FileUpload = ({
                     <motion.div
                       initial={{ opacity: 0, scale: 0.8 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      className="flex-shrink-0"
+                      className="shrink-0"
                     >
                       <PDFIcon className="h-12 w-12 text-red-600 dark:text-red-400" />
                     </motion.div>
@@ -185,14 +185,14 @@ export const FileUpload = ({
                         <motion.p
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
-                          className="text-base font-medium text-neutral-700 dark:text-neutral-300 truncate"
+                          className="text-base font-medium text-foreground truncate"
                         >
                           {file.name}
                         </motion.p>
                         <motion.p
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
-                          className="text-sm text-neutral-600 dark:text-neutral-400 shrink-0"
+                          className="text-sm text-muted-foreground shrink-0"
                         >
                           {(file.size / (1024 * 1024)).toFixed(2)} MB
                         </motion.p>
@@ -202,7 +202,7 @@ export const FileUpload = ({
                       <motion.p
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
-                        className="text-sm text-neutral-500 dark:text-neutral-400"
+                        className="text-sm text-muted-foreground"
                       >
                         Last Modified {new Date(file.lastModified).toLocaleDateString()}
                       </motion.p>
@@ -211,39 +211,55 @@ export const FileUpload = ({
                 </motion.div>
               ))}
             {!files.length && (
-              <motion.div
-                layoutId="file-upload"
-                variants={mainVariant}
-                transition={{
-                  type: "spring",
-                  stiffness: 300,
-                  damping: 20,
-                }}
-                className={cn(
-                  "relative group-hover/file:shadow-2xl z-40 bg-white dark:bg-neutral-900 flex items-center justify-center h-32 mt-4 w-full max-w-[8rem] mx-auto rounded-md",
-                  "shadow-[0px_10px_50px_rgba(0,0,0,0.1)]"
-                )}
-              >
-                {isDragActive ? (
-                  <motion.p
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="text-neutral-600 flex flex-col items-center"
-                  >
-                    Drop it
-                    <FileUploadIcon className="h-10 w-10 text-neutral-600 dark:text-neutral-400 mt-2" />
-                  </motion.p>
-                ) : (
-                  <FileUploadIcon className="h-10 w-10 text-neutral-600 dark:text-neutral-300 mt-2" />
-                )}
-              </motion.div>
-            )}
+              <div className="relative h-32 mt-4 w-full max-w-32 mx-auto">
+                <motion.div
+                  layoutId="file-upload"
+                  variants={mainVariant}
+                  transition={{
+                    type: "spring",
+                    stiffness: 300,
+                    damping: 20,
+                  }}
+                  onMouseEnter={() => setIsHovered(true)}
+                  onMouseLeave={() => setIsHovered(false)}
+                  className="relative z-30 bg-card flex items-center justify-center h-full w-full rounded-md"
+                  style={{
+                    boxShadow: isHovered
+                      ? (theme === 'dark'
+                        ? '0 20px 25px -5px rgba(185, 28, 28, 0.4), 0 8px 10px -6px rgba(185, 28, 28, 0.3)'
+                        : '0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.15)')
+                      : (theme === 'dark'
+                        ? '0px 10px 50px rgba(185, 28, 28, 0.15)'
+                        : '0px 10px 50px rgba(0,0,0,0.1)'),
+                    transition: 'box-shadow 550ms cubic-bezier(0.4, 0, 0.2, 1)'
+                  }}
+                  onAnimationStart={() => console.log('Main variant animation started')}
+                  onAnimationComplete={() => console.log('Main variant animation completed')}
+                >
+                  {isDragActive ? (
+                    <motion.p
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="text-muted-foreground flex flex-col items-center"
+                    >
+                      Drop it
+                      <FileUploadIcon className="h-10 w-10 text-muted-foreground mt-2" />
+                    </motion.p>
+                  ) : (
+                    <FileUploadIcon className="h-10 w-10 text-muted-foreground mt-2" />
+                  )}
+                </motion.div>
 
-            {!files.length && (
-              <motion.div
-                variants={secondaryVariant}
-                className="absolute opacity-0 border border-dashed border-red-600 inset-0 z-30 bg-transparent flex items-center justify-center h-32 mt-4 w-full max-w-[8rem] mx-auto rounded-md"
-              ></motion.div>
+
+                <motion.div
+                  initial="initial"
+                  animate={isDragActive ? "animate" : "initial"}
+                  variants={secondaryVariant}
+                  className="absolute border border-dashed inset-0 z-0 bg-transparent rounded-md pointer-events-none"
+                  onAnimationStart={() => console.log('Secondary variant animation started', { isDragActive })}
+                  onAnimationComplete={(definition) => console.log('Secondary variant animation completed', { definition, isDragActive })}
+                ></motion.div>
+              </div>
             )}
             {/* End upload area */}
 

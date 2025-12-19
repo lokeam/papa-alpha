@@ -2,8 +2,13 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { useTheme } from 'next-themes';
+
+// Utils
 import { cn } from '@/components/ui/utils';
-import { FileIcon } from '@/components/ui/icons/FileIcon';
+
+// Icons
+import { BuildingIcon } from '@/components/ui/icons/BuildingIcon';
 import { WarningIcon } from '@/components/ui/icons/WarningIcon';
 import { CircleQuestionMarkIcon } from '@/components/ui/icons/CircleQuestionMarkIcon';
 import { HandShakeIcon } from '@/components/ui/icons/HandShakeIcon';
@@ -69,24 +74,31 @@ export function ScopeCard({
   maxValue,
   subtitle,
   riskBreakdown,
-  badge,
   href,
   className
 }: ScopeCardProps) {
+  const { theme } = useTheme();
+  const [isHovered, setIsHovered] = React.useState(false);
+
   // Icon selection based on variant
   const getIcon = () => {
-    const iconClasses = "w-5 h-5 text-rose-700 dark:text-rose-400";
+    const iconColor = theme === 'dark' ? 'hsl(1, 78%, 65%)' : 'hsl(1, 78%, 35%)';
+    const iconClasses = "w-5 h-5";
 
+    const iconElement = (() => {
     switch (variant) {
       case 'score':
-        return <FileIcon className={iconClasses} />;
+          return <BuildingIcon className={iconClasses} />;
       case 'risks':
-        return <WarningIcon className={iconClasses} />;
+          return <WarningIcon className={iconClasses} />;
       case 'questions':
-        return <CircleQuestionMarkIcon className={iconClasses} />;
+          return <CircleQuestionMarkIcon className={iconClasses} />;
       case 'opportunities':
-        return <HandShakeIcon className={iconClasses} />;
+          return <HandShakeIcon className={iconClasses} />;
     }
+    })();
+
+    return <span style={{ color: iconColor }}>{iconElement}</span>;
   };
 
   // Calculate progress percentage for score variant
@@ -98,24 +110,34 @@ export function ScopeCard({
   return (
     <Link href={detailUrl} className="col-span-1 h-full">
       <div
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        style={{
+          borderColor: isHovered ? 'hsl(var(--primary) / 0.3)' : 'hsl(var(--card-border))',
+          boxShadow: theme === 'dark'
+            ? isHovered
+              ? '0 20px 25px -5px rgba(136, 19, 55, 0.4), 0 8px 10px -6px rgba(136, 19, 55, 0.3)'
+              : '0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 1px 2px -1px rgba(0, 0, 0, 0.2)'
+            : isHovered
+              ? '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)'
+              : '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)',
+          transition: 'all 150ms cubic-bezier(0.4, 0, 0.2, 1)'
+        }}
         className={cn(
-          "h-full flex flex-col relative rounded-xl border bg-white dark:bg-zinc-900",
-          "border-gray-200 dark:border-zinc-800",
-          "p-6 transition-all duration-300 ease-in-out",
-          // Hover effects:
-          // - Border color changes to red (rose-600)
-          // - Shadow: dark on light mode, light on dark mode
-          // - Cursor becomes pointer
-          "hover:border-rose-600 dark:hover:border-rose-500",
-          "hover:shadow-lg hover:shadow-black/10",
-          "dark:hover:shadow-xl dark:hover:shadow-white/10",
+          "h-full flex flex-col relative rounded-xl",
+          "bg-card",
+          "border",
+          "p-6",
           "cursor-pointer",
           className
         )}
       >
       {/* Icon Badge - Top Right */}
       <div className="absolute top-6 right-6">
-        <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-rose-100 dark:bg-rose-950">
+        <div
+          style={{ backgroundColor: theme === 'dark' ? 'hsl(1, 78%, 15%)' : 'hsl(0, 25%, 91%)' }}
+          className="flex items-center justify-center w-10 h-10 rounded-lg"
+        >
           {getIcon()}
         </div>
       </div>
@@ -123,7 +145,7 @@ export function ScopeCard({
       {/* Content */}
       <div className="pr-14"> {/* Add padding to avoid icon overlap */}
         {/* Title */}
-        <h3 className="text-base font-semibold text-black dark:text-white mb-3">
+        <h3 className="text-base font-semibold text-foreground mb-3">
           {title}
         </h3>
 
@@ -131,15 +153,15 @@ export function ScopeCard({
         <div className="mb-3">
           {variant === 'score' && maxValue ? (
             <div className="flex items-baseline gap-1">
-              <span className="text-4xl font-bold text-black dark:text-white">
+              <span className="text-4xl font-bold text-foreground">
                 {value}
               </span>
-              <span className="text-2xl font-medium text-gray-400 dark:text-zinc-500">
+              <span className="text-2xl font-medium text-muted-foreground">
                 /{maxValue}
               </span>
             </div>
           ) : (
-            <span className="text-4xl font-bold text-black dark:text-white">
+            <span className="text-4xl font-bold text-foreground">
               {value}
             </span>
           )}
@@ -147,10 +169,16 @@ export function ScopeCard({
 
         {/* Score Progress Bar */}
         {variant === 'score' && maxValue && (
-          <div className="w-full h-2 bg-rose-200 dark:bg-rose-900 rounded-full overflow-hidden">
+          <div
+            style={{ backgroundColor: theme === 'dark' ? 'hsl(1, 78%, 15%)' : 'hsl(0, 25%, 91%)' }}
+            className="w-full h-2 rounded-full overflow-hidden"
+          >
             <div
-              className="h-full bg-red-800 dark:bg-rose-400 rounded-full transition-all duration-500"
-              style={{ width: `${progressPercentage}%` }}
+              style={{
+                width: `${progressPercentage}%`,
+                backgroundColor: theme === 'dark' ? 'hsl(1, 78%, 65%)' : 'hsl(1, 78%, 35%)'
+              }}
+              className="h-full rounded-full transition-all duration-500"
             />
           </div>
         )}
@@ -160,19 +188,19 @@ export function ScopeCard({
           <div className="flex items-center gap-4 text-sm">
             <div className="flex items-center gap-1.5">
               <div className="w-2 h-2 rounded-full bg-red-500" />
-              <span className="text-gray-700 dark:text-zinc-300">
+              <span className="text-foreground">
                 {riskBreakdown.high} High
               </span>
             </div>
             <div className="flex items-center gap-1.5">
               <div className="w-2 h-2 rounded-full bg-orange-500" />
-              <span className="text-gray-700 dark:text-zinc-300">
+              <span className="text-foreground">
                 {riskBreakdown.medium} Med
               </span>
             </div>
             <div className="flex items-center gap-1.5">
               <div className="w-2 h-2 rounded-full bg-gray-500 dark:bg-zinc-500" />
-              <span className="text-gray-700 dark:text-zinc-300">
+              <span className="text-foreground">
                 {riskBreakdown.low} Low
               </span>
             </div>
@@ -181,7 +209,7 @@ export function ScopeCard({
 
         {/* Subtitle (for questions and opportunities) */}
         {subtitle && (variant === 'questions' || variant === 'opportunities') && (
-          <p className="text-sm text-gray-500 dark:text-zinc-400">
+          <p className="text-sm text-muted-foreground">
             {subtitle}
           </p>
         )}

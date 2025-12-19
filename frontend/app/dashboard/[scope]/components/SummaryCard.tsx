@@ -1,6 +1,8 @@
 'use client';
 
 import { ReactNode } from 'react';
+import { CircleCheckIcon } from '@/components/ui/icons/CircleCheckIcon';
+
 
 type SummaryCardProps = {
   title: string;
@@ -16,19 +18,20 @@ export function SummaryCard({
   nextAction
 }: SummaryCardProps) {
   return (
-    <div className="mb-6 p-4 border border-gray-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-900">
+    <div className="mb-6 p-4 border rounded-lg bg-card" style={{ borderColor: 'hsl(var(--card-border))' }}>
       <div className="flex items-center justify-between mb-2">
-        <span className="text-sm font-medium text-gray-900 dark:text-white">
+        <span className="text-sm font-medium text-foreground">
           {title}
         </span>
-        <span className="text-sm text-gray-600 dark:text-zinc-400">
+        <div className="text-sm text-muted-foreground flex items-center gap-2">
           {statusLine}
-        </span>
+        </div>
       </div>
-      <div className="text-sm text-gray-600 dark:text-zinc-400">
+      <div className="text-sm text-muted-foreground flex items-center gap-2">
+        <CircleCheckIcon className="w-8 h-8 text-green-600 dark:text-green-400" />
         {progressLine}
       </div>
-      <div className="mt-2 text-sm text-gray-700 dark:text-zinc-300">
+      <div className="mt-2 text-sm text-muted-foreground">
         {nextAction}
       </div>
     </div>

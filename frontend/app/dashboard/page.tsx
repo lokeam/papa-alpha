@@ -41,7 +41,7 @@ export default function SolicitationsDashboard() {
       <PageMain>
         <div className="flex min-h-screen items-center justify-center">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-800 dark:border-red-600 mx-auto mb-4"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
             <p className="text-gray-600 dark:text-gray-400">Loading analysis...</p>
           </div>
         </div>
@@ -55,14 +55,14 @@ export default function SolicitationsDashboard() {
       <PageMain>
         <div className="flex min-h-screen items-center justify-center">
           <div className="max-w-md w-full mx-4">
-            <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg border border-red-200 dark:border-red-800 p-8">
-              <h1 className="text-2xl font-bold text-red-600 dark:text-red-400 mb-4">Error</h1>
-              <p className="text-gray-700 dark:text-gray-300 mb-6">
+            <div className="bg-card rounded-lg shadow-lg border border-destructive/30 p-8">
+              <h1 className="text-2xl font-bold text-destructive mb-4">Error</h1>
+              <p className="text-foreground mb-6">
                 {error || 'Analysis results not available'}
               </p>
               <button
                 onClick={() => router.push('/upload')}
-                className="w-full px-6 py-3 bg-red-800 hover:bg-red-900 dark:bg-red-900 dark:hover:bg-red-950 text-white rounded-lg font-medium transition-colors"
+                className="w-full px-6 py-3 bg-primary hover:bg-primary/90 text-white rounded-lg font-medium transition-colors"
               >
                 Upload New Document
               </button>
@@ -92,7 +92,7 @@ export default function SolicitationsDashboard() {
 
         {/* Analysis Results Section */}
         <div className="mb-8">
-          <h2 className="text-xl font-semibold text-black dark:text-white mb-6">
+          <h2 className="text-2xl font-semibold text-foreground mb-6">
             Analysis Results
           </h2>
           <PageGrid columns={{ sm: 1, md: 2, lg: 2 }}>

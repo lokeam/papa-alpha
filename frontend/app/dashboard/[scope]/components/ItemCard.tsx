@@ -1,6 +1,8 @@
 'use client';
 
-import { cn } from '@/components/ui/utils';
+import { useTheme } from 'next-themes';
+
+import { AskteriskIcon } from '@/components/ui/icons/AskteriskIcon';
 
 type ItemCardProps = {
   id: string;
@@ -12,39 +14,42 @@ type ItemCardProps = {
 };
 
 export function ItemCard({
-  id,
   title,
   subtitle,
   preview,
   isSelected,
   onClick
 }: ItemCardProps) {
+  const { theme } = useTheme();
   return (
     <button
       onClick={onClick}
-      className={cn(
-        "w-full p-3 text-left rounded-lg border transition-all duration-200",
-        isSelected
-          ? "border-rose-600 dark:border-rose-500 bg-rose-50 dark:bg-rose-950/30"
-          : "border-gray-200 dark:border-zinc-800 hover:border-rose-300 dark:hover:border-rose-700 hover:bg-gray-50 dark:hover:bg-zinc-800"
-      )}
+      className="w-full p-3 text-left rounded-lg border transition-all duration-200 cursor-pointer"
+      style={{
+        backgroundColor: isSelected
+          ? (theme === 'dark' ? 'rgba(136, 19, 55, 0.3)' : '#fff1f2')
+          : (theme === 'dark' ? '#09090b' : '#ffffff'),
+        borderColor: isSelected
+          ? (theme === 'dark' ? '#f43f5e' : '#e11d48')
+          : (theme === 'dark' ? '#27272a' : '#e4e4e7')
+      }}
     >
       <div className="flex items-start gap-2">
-        <span className="text-gray-400 dark:text-zinc-500 mt-1">
+        <span className="text-muted-foreground mt-1">
           {isSelected ? '●' : '○'}
         </span>
         <div className="flex-1">
-          <div className="font-medium text-gray-900 dark:text-white mb-1">
+          <div className="font-medium text-foreground mb-1">
             {title}
           </div>
-          <div className="text-xs text-gray-600 dark:text-zinc-400 mb-1">
-            {subtitle}
+          <div className="text-xs text-muted-foreground mb-1 flex items-center gap-2 mt-6">
+            <AskteriskIcon className="w-8 h-8 text-red-600" />{subtitle}
           </div>
-          <div className="text-sm text-gray-600 dark:text-zinc-400">
+          <div className="text-sm text-muted-foreground">
             {preview}
           </div>
           {!isSelected && (
-            <div className="text-xs text-rose-600 dark:text-rose-400 mt-2">
+            <div className="text-sm text-red-600 dark:text-red-400 mt-6">
               Click to review
             </div>
           )}

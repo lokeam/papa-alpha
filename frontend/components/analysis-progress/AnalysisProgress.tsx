@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { motion } from 'motion/react';
-import { cn } from '@/components/ui/utils';
 
 // Types
 export type StepStatus = 'pending' | 'processing' | 'complete' | 'error';
@@ -88,7 +87,7 @@ const AnalysisStepItem = ({ step }: { step: AnalysisStep }) => {
       <div className="ml-9 space-y-1">
         <div className="flex items-center gap-3">
           <ProgressBar progress={step.progress} />
-          <span className="text-xs text-neutral-500 dark:text-neutral-400 min-w-[3rem] text-right">
+          <span className="text-xs text-neutral-500 dark:text-neutral-400 min-w-12 text-right">
             {step.progress}%
           </span>
         </div>
