@@ -10,6 +10,56 @@
 
 ## Architecture
 
+### System Overview
+
+```mermaid
+graph TB
+    User[👤 User Browser] -->|1. Upload PDF| FE[Next.js Frontend<br/>localhost:3000]
+    FE -->|2. Store PDF| SB_Storage[Supabase Storage]
+    FE -->|3. Create Record| SB_DB[(Supabase PostgreSQL<br/>localhost:54321)]
+    FE -->|4. Queue Job| Redis[Redis Queue<br/>localhost:6379]
+
+    Worker[Python Worker<br/>Docker Container] -->|5. Pop Job| Redis
+    Worker -->|6. Download PDF| SB_Storage
+    Worker -->|7. Extract Text| Worker
+    Worker -->|8. Analyze| LLM[OpenAI GPT-4o-mini]
+    LLM -->|9. Structured JSON| Worker
+    Worker -->|10. Store Results| SB_DB
+    Worker -->|11. Publish Progress| Redis
+
+    FE -->|Subscribe SSE| Redis
+    Redis -->|Real-time Updates| FE
+    FE -->|Fetch Analysis| SB_DB
+
+    Redis_UI[Redis Commander<br/>:8081] -.->|Monitor| Redis
+    SB_Studio[Supabase Studio<br/>:54323] -.->|Manage| SB_DB
+
+    style User fill:#e1f5ff,stroke:#01579b,stroke-width:2px
+    style FE fill:#4CAF50,stroke:#2e7d32,stroke-width:2px,color:#fff
+    style Worker fill:#2196F3,stroke:#0d47a1,stroke-width:2px,color:#fff
+    style LLM fill:#FF9800,stroke:#e65100,stroke-width:2px,color:#fff
+    style Redis fill:#DC382D,stroke:#a50e0e,stroke-width:2px,color:#fff
+    style SB_DB fill:#3ECF8E,stroke:#1e8e5e,stroke-width:2px,color:#fff
+    style SB_Storage fill:#3ECF8E,stroke:#1e8e5e,stroke-width:2px,color:#fff
+    style Redis_UI fill:#ffeaa7,stroke:#fdcb6e
+    style SB_Studio fill:#ffeaa7,stroke:#fdcb6e
+```
+
+**Data Flow:**
+1. User uploads PDF through Next.js frontend
+2. PDF stored in Supabase Storage
+3. Document record created in PostgreSQL
+4. Analysis job queued in Redis
+5. Python worker pops job from queue
+6. Worker downloads PDF from storage
+7. Text extracted using PyPDF2/pdfplumber
+8. GPT-4o-mini analyzes across 4 categories
+9. Structured JSON results returned
+10. Results stored in database
+11. Progress updates published to Redis pub/sub
+12. Frontend receives real-time updates via SSE
+13. Dashboard displays analysis results
+
 ### Frontend (Next.js 16 + TypeScript)
 - **Framework**: Next.js 16 with App Router, React 19, TypeScript
 - **Styling**: TailwindCSS 4 with custom design system
@@ -65,7 +115,7 @@ Comprehensive strategies implemented:
 - [Self-critique loops](https://arxiv.org/html/2512.15053) before output finalization
 - Few-shot examples with edge case coverage
 
-See [`workers/prompt_engineering.md`](workers/prompt_engineering.md) for detailed prompt specifications.
+See [`docs/prompt_engineering.md`](docs/prompt_engineering.md) for detailed prompt specifications.
 
 ## Tech Stack
 
@@ -198,7 +248,17 @@ supabase db reset
 ```
 This applies all migrations and populates your tables. Verify by logging into [Supabase Studio](http://localhost:54323).
 
-**5. Start the frontend:**
+**5. Generate TypeScript types:**
+
+Regenerate types to keep frontend in sync with database schema:
+```bash
+make types-generate
+
+# Or manually:
+cd frontend && npm run types:generate
+```
+
+**6. Start the frontend:**
 ```bash
 cd frontend
 npm run dev
@@ -339,7 +399,7 @@ The application implements comprehensive anti-hallucination strategies:
 7. **Explicit Constraints**: What NOT to do clearly specified
 8. **Grounding**: Must quote exact RFP text, cannot infer
 
-See [`workers/prompt_engineering.md`](workers/prompt_engineering.md) for complete specifications.
+See [`docs/prompt_engineering.md`](docs/prompt_engineering.md) for complete specifications.
 
 ## Cost Optimization
 
@@ -353,7 +413,7 @@ See [`workers/prompt_engineering.md`](workers/prompt_engineering.md) for complet
 This is a demonstration project for technical evaluation purposes.
 
 ## Documentation - Frontend, Worker & Prompt Engineering
-- [Frontend](docs/frontend_README.md)
+- [Next.js/React Frontend](docs/frontend_README.md)
 - [Python Worker](docs/python_worker_README.md)
 - [Prompt Engineering Specifications](docs/prompt_engineering.md)
 

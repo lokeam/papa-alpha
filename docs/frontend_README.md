@@ -293,10 +293,37 @@ REDIS_URL=redis://localhost:6379
 ```
 
 ### Type generation
-Generate TypeScript types from Supabase schema:
+
+**Supabase Auto-Generated Types**
+
+The project uses Supabase CLI to auto-generate TypeScript types from the database schema. This keeps frontend and backend in sync automatically.
+
 ```bash
-npm run types:generate
+# Using Makefile (recommended):
+make types-generate
+
+# Or manually:
+cd frontend && npm run types:generate
 ```
+
+This generates `app/lib/types/database.ts` with type-safe interfaces for:
+- Database tables (`documents`, etc.)
+- Column types
+- Relationships
+- Enums
+
+**When to regenerate:**
+- After running database migrations (`supabase db reset`)
+- After modifying table schemas
+- When adding new columns or tables
+- If you see TypeScript errors related to database queries
+
+**Benefits:**
+- Type safety for Supabase queries
+- Auto-completion in IDE
+- Catches schema mismatches at compile time
+- No manual type definitions needed
+- Frontend stays in sync with database changes
 
 ## Design Decisions
 
@@ -374,4 +401,4 @@ try {
 
 ---
 
-For backend documentation, see [`/workers/README.md`](../workers/README.md)
+For backend documentation, see [`python_worker_README.md`](../python_worker_README.md)
