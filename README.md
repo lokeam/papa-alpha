@@ -8,7 +8,6 @@
 <img width="668" alt="pa_scope_page" src="https://github.com/user-attachments/assets/ccda6031-5be6-4a11-94e4-d27856484dba" />
 <img width="668" alt="pa_scope_page_expanded" src="https://github.com/user-attachments/assets/1adf6bc4-5bb1-4b75-98bf-81ebf31ca834" />
 
-
 ## Architecture
 
 ### Frontend (Next.js 16 + TypeScript)
@@ -118,66 +117,163 @@ papa-alpha/
 ## Getting Started
 
 ### Prerequisites
-- Node.js 20+
-- Python 3.11+
-- Docker & Docker Compose
-- Supabase CLI (for local development)
-- OpenAI API key
+- **Docker & Docker Compose** - Container runtime
+- **Node.js 20+** - Frontend runtime
+- **Supabase CLI** - Local database management
+  ```bash
+  # macOS
+  brew install supabase/tap/supabase
 
-### Environment Setup
+  # Other platforms: https://supabase.com/docs/guides/cli
+  ```
+- **OpenAI API key** - Required for GPT-4o-mini analysis
 
-1. **Clone and install dependencies**:
+### Quick Start
+
+The project uses a Makefile for simplified development workflow and ease of Developer Experience:
+
+**1. First-time setup:**
 ```bash
-# Frontend
-cd frontend
-npm install
-
-# Workers
-cd ../workers
-pip install -r requirements.txt
+make setup
 ```
+This will:
+- Check prerequisites (Docker, Node.js, Supabase CLI)
+- Create `.env` from `.env.example`
+- Install frontend dependencies
+- Initialize Supabase
+- Create uploads directory
 
-2. **Configure environment variables**:
-```bash
-cp .env.example .env
-```
-
-Required variables:
-```bash
-# Supabase
-SUPABASE_URL=http://localhost:54321
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-
-# Redis
-REDIS_URL=redis://localhost:6379
-
-# OpenAI
-OPENAI_API_KEY=your-openai-api-key
-```
-
-3. **Start local Supabase**:
+**2. Start Supabase:**
 ```bash
 supabase start
-supabase db reset  # Apply migrations
 ```
+Copy the API keys from the output - you'll need them for the next step.
 
-4. **Start Redis and workers**:
+**3. Configure environment variables:**
+
+**a) Create `frontend/.env.local`:**
 ```bash
-docker-compose up -d
+NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+SUPABASE_SERVICE_ROLE_KEY=YOUR_SB_SECRET_HERE
+SUPABASE_PROJECT_ID=papa-alpha
+
+# Redis Local (not Docker)
+REDIS_URL=redis://localhost:6379
 ```
 
-5. **Start frontend**:
+**b) Edit root `.env`:**
+```bash
+# Frontend
+NEXT_PUBLIC_API_URL=http://localhost:8000
+
+# Supabase (Next.js)
+NEXT_PUBLIC_SUPABASE_URL=http://localhost:54321
+NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR_SB_KEY_USED_FOR_YOUR_NEXT_CLIENT
+
+# Worker specific (FastAPI)
+SUPABASE_URL=http://host.docker.internal:54321
+SUPABASE_SERVICE_KEY=YOUR_SB_SECRET_USED_FOR_YOUR_WORKER
+SUPABASE_SERVICE_ROLE_KEY=YOUR_SB_SECRET_USED_FOR_YOUR_WORKER
+
+# LLMs
+OPENAI_API_KEY=YOUR_OPENAI_API_KEY_HERE
+
+# Redis
+REDIS_URL=redis://redis:6379
+
+# Environment
+NODE_ENV=development
+PYTHON_ENV=development
+```
+
+**Important:** Replace the placeholder values:
+- `YOUR_SB_SECRET_HERE` - Service role key from `supabase start` output
+- `YOUR_SB_KEY_USED_FOR_YOUR_NEXT_CLIENT` - Anon key from `supabase start` output
+- `YOUR_SB_SECRET_USED_FOR_YOUR_WORKER` - Service role key (same as above)
+- `YOUR_OPENAI_API_KEY_HERE` - Your OpenAI API key
+
+**4. Run database migrations:**
+```bash
+supabase db reset
+```
+This applies all migrations and populates your tables. Verify by logging into [Supabase Studio](http://localhost:54323).
+
+**5. Start the frontend:**
 ```bash
 cd frontend
 npm run dev
 ```
+Frontend will be available at [http://localhost:3000](http://localhost:3000)
+
+**6. Start the worker (in a separate terminal):**
+```bash
+make worker-restart
+```
+
+Optionally, watch worker logs:
+```bash
+make worker-logs
+```
 
 Access the application at [http://localhost:3000](http://localhost:3000)
 
+### Daily Development
+
+```bash
+# Start everything
+make start
+
+# Stop everything (preserves data)
+make stop
+
+# Restart all services
+make restart
+
+# View service health
+make health
+
+# Watch worker logs
+make worker-logs
+
+# Watch real-time progress updates
+make redis-subscribe
+```
+
 ### Development Tools
 
-- **Redis Commander**: [http://localhost:8081](http://localhost:8081) - Visual Redis debugging
+- **Frontend**: [http://localhost:3000](http://localhost:3000)
 - **Supabase Studio**: [http://localhost:54323](http://localhost:54323) - Database management
+- **Redis Commander**: [http://localhost:8081](http://localhost:8081) - Visual Redis debugging
+- **Worker Health**: [http://localhost:8000/health](http://localhost:8000/health)
+
+### Makefile Commands
+
+Run `make help` to see all available commands:
+
+**Setup & Initialization:**
+- `make setup` - First-time setup
+- `make check-ports` - Verify required ports are available
+
+**Development:**
+- `make start` - Start all services
+- `make stop` - Stop all services (preserves data)
+- `make restart` - Restart all services
+- `make reset` - Clean slate (removes all data)
+
+**Individual Services:**
+- `make supabase-start` - Start Supabase only
+- `make docker-up` - Start Docker services (worker + Redis)
+- `make frontend-dev` - Start frontend only
+
+**Monitoring:**
+- `make health` - Check service health
+- `make logs` - View all Docker logs
+- `make worker-logs` - View worker logs
+- `make redis-subscribe` - Watch real-time progress updates
+
+**Cleanup:**
+- `make clean` - Remove containers (preserves data)
+- `make reset` - Remove everything including data
 
 ## Usage Flow
 
@@ -245,27 +341,6 @@ The application implements comprehensive anti-hallucination strategies:
 
 See [`workers/prompt_engineering.md`](workers/prompt_engineering.md) for complete specifications.
 
-## Testing
-
-```bash
-# Frontend type checking
-cd frontend
-npm run build
-
-# Worker validation
-cd workers
-python scripts/validate_progress.py
-```
-
-## Deployment Considerations
-
-- **Frontend**: Deploy to Vercel with environment variables
-- **Workers**: Deploy to container platform (AWS ECS, GCP Cloud Run)
-- **Database**: Supabase Cloud (production tier)
-- **Redis**: Managed Redis (AWS ElastiCache, Redis Cloud)
-- **Monitoring**: Add structured logging and error tracking
-- **Scaling**: Horizontal worker scaling based on queue depth
-
 ## Cost Optimization
 
 - **Model**: GPT-4o-mini selected for cost efficiency (~$0.15-0.60 per analysis)
@@ -277,10 +352,13 @@ python scripts/validate_progress.py
 
 This is a demonstration project for technical evaluation purposes.
 
-## Documentation
+## Documentation - Frontend, Worker & Prompt Engineering
+- [Frontend](docs/frontend_README.md)
+- [Python Worker](docs/python_worker_README.md)
+- [Prompt Engineering Specifications](docs/prompt_engineering.md)
 
-- [Prompt Engineering Specifications](workers/prompt_engineering.md)
-- [Database Migrations](supabase/migrations/)
+## Documentation - DB & API
+- [Supabase Migrations](supabase/migrations/)
 - [API Documentation](frontend/app/api/)
 
 ---
