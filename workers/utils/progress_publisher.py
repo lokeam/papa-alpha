@@ -4,7 +4,9 @@ import json
 import logging
 from datetime import datetime
 from typing import Optional
-from redis import Redis
+
+from redis.asyncio import Redis
+from redis.exceptions import RedisError
 
 from config import (
     PROGRESS_MILESTONES,
@@ -22,14 +24,14 @@ class ProgressPublisher:
         """Initialize progress publisher
 
         Accepts:
-            redis_client: Redis client instance
+            redis_client: Async Redis client instance
             document_id: Document UUID to track
         """
         self.redis = redis_client
         self.document_id = document_id
         self.channel = f"{PROGRESS_CHANNEL_PREFIX}:{document_id}"
 
-    def publish(self, step: str, custom_message: Optional[str] = None) -> None:
+    async def publish(self, step: str, custom_message: Optional[str] = None) -> None:
         """Publish progress update to Redis channel
 
         Accepts:
@@ -55,17 +57,17 @@ class ProgressPublisher:
             }
 
             # Publish to Redis channel (fire-and-forget)
-            self.redis.publish(self.channel, json.dumps(payload))
+            await self.redis.publish(self.channel, json.dumps(payload))
 
             logger.info(
-                f"📡 Progress: {step} ({progress}%) → {self.channel}"
+                f"Progress: {step} ({progress}%) -> {self.channel}"
             )
 
-        except Exception as e:
+        except RedisError as e:
             # Don't fail job if progress publishing fails
             logger.warning(f"Failed to publish progress for {step}: {e}")
 
-    def publish_error(self, error_message: str) -> None:
+    async def publish_error(self, error_message: str) -> None:
         """Publish error message to progress channel
 
         Accepts:
@@ -80,8 +82,8 @@ class ProgressPublisher:
                 "error": True,
             }
 
-            self.redis.publish(self.channel, json.dumps(payload))
-            logger.info(f"📡 Error published to {self.channel}")
+            await self.redis.publish(self.channel, json.dumps(payload))
+            logger.info(f"Error published to {self.channel}")
 
-        except Exception as e:
+        except RedisError as e:
             logger.warning(f"Failed to publish error: {e}")
