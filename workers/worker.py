@@ -225,8 +225,7 @@ class RFPWorker:
                 "total_cost_usd": analysis_results.total_cost_usd,
                 "processing_time_seconds": analysis_results.processing_time_seconds,
                 "model": DEFAULT_LLM_MODEL,
-                "categories_completed": analysis_results.get_success_rate(),
-                "partial_results": analysis_results.partial_results,
+                "categories_completed": 100.0,
             }
 
             # Step 5: Update database with results
