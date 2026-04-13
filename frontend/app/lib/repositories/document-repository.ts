@@ -142,6 +142,22 @@ export class DocumentRepository {
     }
   }
 
+  async delete(id: string): Promise<void> {
+    try {
+      const { error } = await this.client
+        .from(DOCUMENTS_TABLE)
+        .delete()
+        .eq(DOCUMENTS_TABLE_ID_COL, id);
+
+      if (error) {
+        throw new DatabaseError('Failed to delete document', error);
+      }
+    } catch (error) {
+      if (error instanceof DatabaseError) throw error;
+      throw new DatabaseError(UNEXPECTED_DB_ERROR_MSG, error);
+    }
+  }
+
   async findLatestCompleted(): Promise<Document | null> {
     try {
       const { data, error } = await this.client
