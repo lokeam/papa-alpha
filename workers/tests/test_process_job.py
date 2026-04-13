@@ -1,8 +1,9 @@
-"""Tests for RFPWorker.process_job — Phase 1 (PRD a)."""
+"""Tests for RFPWorker.process_job (PRD a)."""
 
 import json
 import pytest
 
+from exceptions import AnalysisFailedError
 from tests.conftest import make_job, job_json
 from tests.fakes import FakeLLMService
 
@@ -106,3 +107,35 @@ async def test_process_job_acks_processing_list_in_finally(
     # Assert: processing list still empty (acked despite the error)
     remaining = await redis_client.llen(worker.processing_list)
     assert remaining == 0
+
+
+# ---------------------------------------------------------------------------
+# 4. AnalysisFailedError surfaces category name in error message
+# ---------------------------------------------------------------------------
+
+async def test_process_job_analysis_failed_error_includes_category(
+    worker, redis_client, storage_service
+):
+    """AnalysisFailedError from LLM service → document failed with category in message."""
+    doc_id = "cat-fail-001"
+    raw = job_json(doc_id)
+    storage_service.seed(doc_id)
+
+    cause = RuntimeError("rate limit exceeded")
+    worker.llm_service = FakeLLMService(
+        behavior="raise",
+        error=AnalysisFailedError("risks", cause),
+    )
+
+    await redis_client.lpush(worker.processing_list, raw)
+
+    job_data = make_job(doc_id)
+    try:
+        await worker.process_job(job_data)
+    finally:
+        await worker._ack(raw)
+
+    assert storage_service.documents[doc_id]["status"] == "failed"
+    error_msg = storage_service.documents[doc_id]["error_message"]
+    assert "risks" in error_msg
+    assert "rate limit exceeded" in error_msg
