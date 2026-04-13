@@ -24,6 +24,7 @@ frontend/next-env.d.ts
 #==========================================
 # Workers (Python)
 #==========================================
+workers/.worker_id
 workers/**/__pycache__/
 workers/**/*.py[cod]
 workers/**/*$py.class

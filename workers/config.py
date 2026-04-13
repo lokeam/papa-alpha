@@ -39,10 +39,20 @@ SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 # ============================================================================
+# Worker Identity & Shutdown
+# ============================================================================
+
+WORKER_ID = os.getenv("WORKER_ID") or os.getenv("HOSTNAME")
+WORKER_SHUTDOWN_GRACE_SECONDS = int(
+    os.getenv("WORKER_SHUTDOWN_GRACE_SECONDS", "600")
+)
+
+# ============================================================================
 # Queue Config
 # ============================================================================
 
 QUEUE_NAME = "rfp-analysis-queue"
+PROCESSING_LIST_PREFIX = "rfp-analysis-processing"
 QUEUE_POLL_TIMEOUT = 5  # seconds
 
 # ============================================================================
