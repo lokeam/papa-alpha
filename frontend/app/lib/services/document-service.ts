@@ -1,7 +1,7 @@
 import { StorageAdapter } from '@/app/lib/adapters/storage-adapter';
 import { QueueAdapter } from '@/app/lib/adapters/queue-adapter';
 import { DocumentRepository } from '@/app/lib/repositories/document-repository';
-import { ValidationError } from '@/app/lib/utils/error-handler';
+import { ValidationError, QueueError } from '@/app/lib/utils/error-handler';
 import { generateStoragePath } from '@/app/lib/utils/storage';
 
 
@@ -70,9 +70,10 @@ export class DocumentService {
         filename: file.name,
       });
     } catch (error) {
-      // Log error but don't fail the request
-      // The document exists, user can retry analysis
-      console.error('Failed to queue job:', error);
+      // Rollback: delete database record and storage object
+      await this.repository.delete(document.id).catch(console.error);
+      await this.storage.delete(storagePath).catch(console.error);
+      throw new QueueError('Analysis queue is temporarily unavailable', error);
     }
 
     return {

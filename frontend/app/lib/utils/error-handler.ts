@@ -54,8 +54,8 @@ export function handleApiError(error: unknown) {
 
   if (error instanceof QueueError) {
     return NextResponse.json(
-      { error: 'Failed to queue analysis job' },
-      { status: 500 }
+      { error: 'Analysis queue is temporarily unavailable. Please try again.' },
+      { status: 503 }
     );
   }
 
