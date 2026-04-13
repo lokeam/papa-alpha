@@ -80,6 +80,11 @@ export function useDocumentAnalysis(
 
         const data: DocumentWithAnalysis = await response.json();
 
+        // Surface failed status with the actual error message
+        if (data.status === 'failed') {
+          throw new Error(data.error_message || 'Analysis failed');
+        }
+
         // Ensure document has analysis results
         if (!data.analysis_results) {
           throw new Error('Analysis results not available');
