@@ -6,19 +6,19 @@ Orchestrates all 4 analysis categories with:
 - Exponential backoff retry (max 5 attempts)
 - Token tracking and cost calculation
 - Pydantic validation of responses
-- Error handling with partial results
+- Error handling: any category failure is fatal (raises AnalysisFailedError)
 """
 
 import asyncio
 import json
 import logging
 import time
-from typing import Dict, Any, Optional, List
+from typing import Any, Dict, List, Optional
 from datetime import datetime
 
 from openai import AsyncOpenAI
-from pydantic import ValidationError
 
+from exceptions import AnalysisFailedError
 from config import (
     OPENAI_API_KEY,
     LLM_MODEL,
@@ -96,66 +96,46 @@ class LLMService:
         metadata = self.extractor.extract_metadata(full_text)
         logger.info(f"Extracted metadata: {metadata}")
 
-        errors = []
-
         # Phase 1: Run 3 analyses in parallel
         logger.info("Phase 1: Running parallel analyses (risks, accessibility, subcontracting)")
-        # Publish progress before starting
         if progress_publisher:
             await progress_publisher.publish("analyzing_risks")
 
-        results = await asyncio.gather(
-            self._analyze_risks(full_text, metadata),
-            self._analyze_accessibility(full_text, metadata),
-            self._analyze_subcontracting(full_text, metadata),
-            return_exceptions=True
-        )
-
-        risks_result, accessibility_result, subcontracting_result = results
-
-        # Check for errors in parallel execution
-        if isinstance(risks_result, Exception):
-            logger.error(f"Risks analysis failed: {risks_result}")
-            errors.append(f"Risks: {str(risks_result)}")
-            risks_result = None
-
-        if isinstance(accessibility_result, Exception):
-            logger.error(f"Accessibility analysis failed: {accessibility_result}")
-            errors.append(f"Accessibility: {str(accessibility_result)}")
-            accessibility_result = None
-
-        if isinstance(subcontracting_result, Exception):
-            logger.error(f"Subcontracting analysis failed: {subcontracting_result}")
-            errors.append(f"Subcontracting: {str(subcontracting_result)}")
-            subcontracting_result = None
+        try:
+            risks_result, accessibility_result, subcontracting_result = (
+                await asyncio.gather(
+                    self._analyze_risks(full_text, metadata),
+                    self._analyze_accessibility(full_text, metadata),
+                    self._analyze_subcontracting(full_text, metadata),
+                )
+            )
+        except Exception as e:
+            # Determine which category failed from the exception context.
+            # With gather (no return_exceptions), the first exception propagates.
+            category = getattr(e, "_analysis_category", "unknown")
+            raise AnalysisFailedError(category, e) from e
 
         # Phase 2: Run questions (depends on risks)
         logger.info("Phase 2: Running sequential analysis (questions)")
-        # Publish progress before questions
         if progress_publisher:
             await progress_publisher.publish("analyzing_questions")
 
-        questions_result = None
-        try:
-            # Pass risks as context if available
-            risks_context = None
-            if isinstance(risks_result, RisksAnalysis):
-                risks_context = [r.dict() for r in risks_result.risks[:5]]
+        risks_context = [r.dict() for r in risks_result.risks[:5]]
 
+        try:
             questions_result = await self._analyze_questions(
                 full_text,
                 metadata,
                 risks_context
             )
         except Exception as e:
-            logger.error(f"Questions analysis failed: {e}")
-            errors.append(f"Questions: {str(e)}")
+            raise AnalysisFailedError("questions", e) from e
 
         # Calculate totals
         processing_time = time.time() - start_time
         total_cost = self._calculate_total_cost()
 
-        # Build results
+        # Build results — all four categories succeeded if we reach here
         analysis_results = AnalysisResults(
             document_id=document_id,
             analyzed_at=datetime.utcnow(),
@@ -167,14 +147,11 @@ class LLMService:
             cost_breakdown=self.category_costs,
             total_cost_usd=total_cost,
             total_tokens=self.total_input_tokens + self.total_output_tokens,
-            errors=errors,
-            partial_results=len(errors) > 0
         )
 
         logger.info(
             f"Analysis complete: {processing_time:.2f}s, "
-            f"${total_cost:.4f}, "
-            f"{analysis_results.get_success_rate():.0f}% success rate"
+            f"${total_cost:.4f}"
         )
 
         return analysis_results
@@ -183,82 +160,64 @@ class LLMService:
         self,
         full_text: str,
         metadata: Dict[str, Any]
-    ) -> Optional[RisksAnalysis]:
+    ) -> RisksAnalysis:
         """Analyze RFP for risks (Category 1)"""
         logger.info("Analyzing risks...")
 
-        # Extract relevant sections
         section_text = self.extractor.extract_for_risks(full_text)
-
-        # Build prompt
         user_prompt = build_risks_prompt(section_text, metadata)
 
-        # Call LLM with retry
-        response = await self._call_llm_with_retry(
-            system_prompt=RISKS_SYSTEM_PROMPT,
-            user_prompt=user_prompt,
-            category="risks"
-        )
-
-        if not response:
-            return None
-
-        # Parse and validate
         try:
+            response = await self._call_llm_with_retry(
+                system_prompt=RISKS_SYSTEM_PROMPT,
+                user_prompt=user_prompt,
+                category="risks"
+            )
+
             result_json = json.loads(response['content'])
             validated = RisksAnalysis(**result_json)
 
-            # Track cost
             self.category_costs.risks = TokenUsage(**response['usage'])
 
-            logger.info(f"✓ Risks analysis complete: {validated.analysis_summary.total_risks_found} risks found")
+            logger.info(f"Risks analysis complete: {validated.analysis_summary.total_risks_found} risks found")
             return validated
 
-        except (json.JSONDecodeError, ValidationError) as e:
-            logger.error(f"Failed to parse risks response: {e}")
+        except Exception as e:
+            e._analysis_category = "risks"
             raise
 
     async def _analyze_accessibility(
         self,
         full_text: str,
         metadata: Dict[str, Any]
-    ) -> Optional[AccessibilityAnalysis]:
+    ) -> AccessibilityAnalysis:
         """Analyze RFP for accessibility barriers (Category 2)"""
         logger.info("Analyzing accessibility...")
 
-        # Extract relevant sections
         section_text = self.extractor.extract_for_accessibility(full_text)
-
-        # Build prompt
         user_prompt = build_accessibility_prompt(section_text, metadata)
 
-        # Call LLM with retry
-        response = await self._call_llm_with_retry(
-            system_prompt=ACCESSIBILITY_SYSTEM_PROMPT,
-            user_prompt=user_prompt,
-            category="accessibility"
-        )
-
-        if not response:
-            return None
-
-        # Parse and validate
         try:
+            response = await self._call_llm_with_retry(
+                system_prompt=ACCESSIBILITY_SYSTEM_PROMPT,
+                user_prompt=user_prompt,
+                category="accessibility"
+            )
+
             result_json = json.loads(response['content'])
             validated = AccessibilityAnalysis(**result_json)
 
-            # Track cost
             self.category_costs.accessibility = TokenUsage(**response['usage'])
 
             logger.info(
-                f"✓ Accessibility analysis complete: "
+                f"Accessibility analysis complete: "
                 f"score {validated.accessibility_analysis.final_score}/10, "
                 f"{validated.accessibility_analysis.barriers_found} barriers"
             )
             return validated
 
-        except (json.JSONDecodeError, ValidationError) as e:
-            logger.error(f"Failed to parse accessibility response: {e}")
+        except Exception as e:
+            e._analysis_category = "accessibility"
             raise
 
     async def _analyze_questions(
@@ -266,85 +225,62 @@ class LLMService:
         full_text: str,
         metadata: Dict[str, Any],
         risks_context: Optional[List[Dict[str, Any]]] = None
-    ) -> Optional[QuestionsAnalysis]:
+    ) -> QuestionsAnalysis:
         """Predict vendor questions (Category 3)"""
         logger.info("Analyzing questions...")
 
-        # Use same sections as risks
         section_text = self.extractor.extract_for_risks(full_text)
-
-        # Build prompt with risks context
         user_prompt = build_questions_prompt(section_text, metadata, risks_context)
 
-        # Call LLM with retry
         response = await self._call_llm_with_retry(
             system_prompt=QUESTIONS_SYSTEM_PROMPT,
             user_prompt=user_prompt,
             category="questions"
         )
 
-        if not response:
-            return None
+        result_json = json.loads(response['content'])
+        validated = QuestionsAnalysis(**result_json)
 
-        # Parse and validate
-        try:
-            result_json = json.loads(response['content'])
-            validated = QuestionsAnalysis(**result_json)
+        self.category_costs.questions = TokenUsage(**response['usage'])
 
-            # Track cost
-            self.category_costs.questions = TokenUsage(**response['usage'])
-
-            logger.info(
-                f"✓ Questions analysis complete: "
-                f"{validated.questions_predicted} questions, "
-                f"{validated.urgency_breakdown.high} high urgency"
-            )
-            return validated
-
-        except (json.JSONDecodeError, ValidationError) as e:
-            logger.error(f"Failed to parse questions response: {e}")
-            raise
+        logger.info(
+            f"Questions analysis complete: "
+            f"{validated.questions_predicted} questions, "
+            f"{validated.urgency_breakdown.high} high urgency"
+        )
+        return validated
 
     async def _analyze_subcontracting(
         self,
         full_text: str,
         metadata: Dict[str, Any]
-    ) -> Optional[SubcontractingAnalysis]:
+    ) -> SubcontractingAnalysis:
         """Identify subcontracting opportunities (Category 4)"""
         logger.info("Analyzing subcontracting...")
 
-        # Extract relevant sections
         section_text = self.extractor.extract_for_subcontracting(full_text)
-
-        # Build prompt
         user_prompt = build_subcontracting_prompt(section_text, metadata)
 
-        # Call LLM with retry
-        response = await self._call_llm_with_retry(
-            system_prompt=SUBCONTRACTING_SYSTEM_PROMPT,
-            user_prompt=user_prompt,
-            category="subcontracting"
-        )
-
-        if not response:
-            return None
-
-        # Parse and validate
         try:
+            response = await self._call_llm_with_retry(
+                system_prompt=SUBCONTRACTING_SYSTEM_PROMPT,
+                user_prompt=user_prompt,
+                category="subcontracting"
+            )
+
             result_json = json.loads(response['content'])
             validated = SubcontractingAnalysis(**result_json)
 
-            # Track cost
             self.category_costs.subcontracting = TokenUsage(**response['usage'])
 
             logger.info(
-                f"✓ Subcontracting analysis complete: "
+                f"Subcontracting analysis complete: "
                 f"{validated.subcontracting_analysis.opportunities_found} opportunities"
             )
             return validated
 
-        except (json.JSONDecodeError, ValidationError) as e:
-            logger.error(f"Failed to parse subcontracting response: {e}")
+        except Exception as e:
+            e._analysis_category = "subcontracting"
             raise
 
     async def _call_llm_with_retry(
@@ -352,16 +288,14 @@ class LLMService:
         system_prompt: str,
         user_prompt: str,
         category: str
-    ) -> Optional[Dict[str, Any]]:
-        """Call OpenAI API with exponential backoff retry
-
-        Accepts:
-            system_prompt: System prompt
-            user_prompt: User prompt
-            category: Category name for logging
+    ) -> Dict[str, Any]:
+        """Call OpenAI API with exponential backoff retry.
 
         Returns:
-            Dict with 'content' and 'usage' or None if all retries failed
+            Dict with 'content' and 'usage'.
+
+        Raises:
+            The underlying exception from the final retry attempt.
         """
         for attempt in range(1, MAX_RETRIES + 1):
             try:
@@ -419,8 +353,6 @@ class LLMService:
                 delay = min(RETRY_BASE_DELAY * (2 ** (attempt - 1)), RETRY_MAX_DELAY)
                 logger.info(f"[{category}] Retrying in {delay}s...")
                 await asyncio.sleep(delay)
-
-        return None
 
     def _calculate_total_cost(self) -> float:
         """Calculate total cost across all categories"""
