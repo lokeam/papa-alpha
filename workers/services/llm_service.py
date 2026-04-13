@@ -22,6 +22,7 @@ from exceptions import AnalysisFailedError
 from config import (
     OPENAI_API_KEY,
     LLM_MODEL,
+    LLM_PRICING,
     MAX_RETRIES,
     RETRY_BASE_DELAY,
     RETRY_MAX_DELAY,
@@ -320,7 +321,6 @@ class LLMService:
                 self.total_output_tokens += usage.completion_tokens
 
                 # Calculate cost
-                from config import LLM_PRICING
                 pricing = LLM_PRICING[self.model]
                 input_cost = usage.prompt_tokens * pricing['input']
                 output_cost = usage.completion_tokens * pricing['output']
