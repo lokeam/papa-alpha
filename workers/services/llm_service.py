@@ -102,7 +102,7 @@ class LLMService:
         logger.info("Phase 1: Running parallel analyses (risks, accessibility, subcontracting)")
         # Publish progress before starting
         if progress_publisher:
-            progress_publisher.publish("analyzing_risks")
+            await progress_publisher.publish("analyzing_risks")
 
         results = await asyncio.gather(
             self._analyze_risks(full_text, metadata),
@@ -133,7 +133,7 @@ class LLMService:
         logger.info("Phase 2: Running sequential analysis (questions)")
         # Publish progress before questions
         if progress_publisher:
-            progress_publisher.publish("analyzing_questions")
+            await progress_publisher.publish("analyzing_questions")
 
         questions_result = None
         try:

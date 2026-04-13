@@ -1,12 +1,13 @@
 """Papa-Alpha RFP Analysis Worker
 
 Background worker for processing RFP documents with LLM analysis.
+Single async event loop per process. SIGTERM/SIGINT trigger graceful shutdown.
 """
 
-import os
-import sys
-import signal
+import asyncio
 import logging
+import signal
+import sys
 
 from worker import RFPWorker
 
@@ -24,37 +25,36 @@ logger = logging.getLogger(__name__)
 
 
 # ============================================================================
-# Graceful Shutdown
-# ============================================================================
-graceful_shutdown_requested = False
-
-
-def signal_handler(signum, frame):
-    """Gracefully handle shutdown signals"""
-    global graceful_shutdown_requested
-    logger.info(f"Received signal {signum}, starting graceful shutdown...")
-    graceful_shutdown_requested = True
-
-
-# ============================================================================
 # Main Entry Point
 # ============================================================================
-if __name__ == "__main__":
-    # Register signal handlers for graceful shutdown
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGTERM, signal_handler)
-
-    # Create and run worker
+async def _run_worker():
+    """Create, connect, and run the worker with graceful-shutdown wiring."""
     worker = RFPWorker()
+    worker.connect()
+
+    loop = asyncio.get_running_loop()
+
+    def _request_shutdown(sig):
+        logger.info(f"Received signal {sig}, requesting graceful shutdown...")
+        worker._shutdown.set()
+
+    for sig in (signal.SIGTERM, signal.SIGINT):
+        loop.add_signal_handler(sig, _request_shutdown, sig)
 
     try:
-        worker.connect()
-        worker.run()
+        await worker.run()
+    except asyncio.CancelledError:
+        logger.info("Worker run cancelled")
+    finally:
+        await worker.disconnect()
+        logger.info("Worker stopped gracefully")
 
+
+if __name__ == "__main__":
+    try:
+        asyncio.run(_run_worker())
+    except KeyboardInterrupt:
+        pass  # Already handled by signal handler
     except Exception as e:
         logger.error(f"Worker failed with this error: {e}")
         sys.exit(1)
-
-    finally:
-        worker.disconnect()
-        logger.info("Worker stopped gracefully")
