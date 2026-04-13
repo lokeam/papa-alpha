@@ -24,7 +24,7 @@
 #
 # ---------------------------------------------------------------------------
 
-.PHONY: help setup start stop restart logs health clean reset supabase-start supabase-stop supabase-reset types-generate frontend-dev worker-logs redis-logs redis-subscribe dev-logs test-progress worker-build worker-start worker-stop worker-restart worker-shell check-ports
+.PHONY: help setup start stop restart logs health clean reset supabase-start supabase-stop supabase-reset types-generate frontend-dev worker-logs redis-logs redis-subscribe dev-logs test-progress worker-build worker-start worker-stop worker-restart worker-shell check-ports test
 # Colors
 BLUE := \033[34m
 GREEN := \033[32m
@@ -294,6 +294,14 @@ worker-restart:
 worker-shell:
 	@echo "$(BLUE)Opening shell in worker container...$(RESET)"
 	@docker compose exec worker /bin/bash || docker compose exec worker /bin/sh
+
+# ---------------------------------------------------------------------------
+# Test Commands
+# ---------------------------------------------------------------------------
+test:
+	@echo "$(BLUE)Running worker tests...$(RESET)"
+	@cd workers && .venv/bin/python -m pytest tests/ -v
+	@echo "$(GREEN)All tests passed$(RESET)"
 
 # ---------------------------------------------------------------------------
 # Cleanup Commands
