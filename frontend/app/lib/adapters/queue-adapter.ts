@@ -23,16 +23,6 @@ export class QueueAdapter {
     }
   }
 
-  async pop(queue: string): Promise<AnalysisJob | null> {
-    try {
-      const result = await this.client.brpop(queue, 0);
-
-      return result ? JSON.parse(result[1]) : null;
-    } catch (error) {
-      throw new QueueError('Failed to pop job from queue', error);
-    }
-  }
-
   async disconnect(): Promise<void> {
     await this.client.quit();
   }
