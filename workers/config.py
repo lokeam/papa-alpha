@@ -21,6 +21,12 @@ LLM_PRICING = {
     },
 }
 
+# Temperature for LLM calls (lower = more deterministic)
+LLM_TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", "0.1"))
+
+# Max risks passed as context to the questions prompt (token budget management)
+RISKS_CONTEXT_LIMIT = 5
+
 # Retry configuration
 MAX_RETRIES = 5
 RETRY_BASE_DELAY = 1  # seconds
