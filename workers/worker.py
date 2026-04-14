@@ -96,24 +96,20 @@ class RFPWorker:
             self.redis_client = Redis.from_url(REDIS_URL, decode_responses=True)
             logger.info(f"Connected to Redis at {REDIS_URL}")
 
-        if self.storage_service is None:
+        needs_supabase = self.storage_service is None or self.pdf_service is None
+        if needs_supabase and self.supabase_client is None:
             if not SUPABASE_SERVICE_ROLE_KEY:
                 raise ValueError("SUPABASE_SERVICE_ROLE_KEY environment variable not provided")
             self.supabase_client = create_client(
                 SUPABASE_URL.rstrip('/') + '/',
                 SUPABASE_SERVICE_ROLE_KEY,
             )
-            self.storage_service = StorageService(self.supabase_client)
             logger.info(f"Connected to Supabase at {SUPABASE_URL}")
 
+        if self.storage_service is None:
+            self.storage_service = StorageService(self.supabase_client)
+
         if self.pdf_service is None:
-            if self.supabase_client is None:
-                if not SUPABASE_SERVICE_ROLE_KEY:
-                    raise ValueError("SUPABASE_SERVICE_ROLE_KEY environment variable not provided")
-                self.supabase_client = create_client(
-                    SUPABASE_URL.rstrip('/') + '/',
-                    SUPABASE_SERVICE_ROLE_KEY,
-                )
             self.pdf_service = PDFService(self.supabase_client, STORAGE_BUCKET)
 
         if self.llm_service is None:
