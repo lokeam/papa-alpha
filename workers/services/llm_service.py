@@ -13,7 +13,10 @@ import asyncio
 import json
 import logging
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from utils.progress_publisher import ProgressPublisher
 from datetime import datetime
 
 from openai import AsyncOpenAI
@@ -80,7 +83,7 @@ class LLMService:
         self,
         document_id: str,
         full_text: str,
-        progress_publisher=None,
+        progress_publisher: Optional["ProgressPublisher"] = None,
     ) -> AnalysisResults:
         """Run complete RFP analysis (all 4 categories)
 
