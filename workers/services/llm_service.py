@@ -357,8 +357,22 @@ class LLMService:
                     }
                 }
 
-            except Exception as e:
-                logger.warning(f"[{category}] Attempt {attempt} failed: {e}")
+            except (
+                AuthenticationError,
+                PermissionDeniedError,
+                BadRequestError,
+                NotFoundError,
+            ) as e:
+                logger.error(f"[{category}] Non-retryable error: {e}")
+                raise
+
+            except (
+                RateLimitError,
+                APIConnectionError,
+                APITimeoutError,
+                APIStatusError,
+            ) as e:
+                logger.warning(f"[{category}] Attempt {attempt} failed (retryable): {e}")
 
                 if attempt == MAX_RETRIES:
                     logger.error(f"[{category}] All {MAX_RETRIES} attempts failed")
