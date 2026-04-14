@@ -257,6 +257,7 @@ class RFPWorker:
                 self.storage_service.mark_failed(document_id, error_msg)
             except Exception as db_error:
                 logger.error(f"Failed to update error status: {db_error}")
+                raise
 
         finally:
             if pdf_path:
@@ -332,7 +333,14 @@ class RFPWorker:
         if job_task in done:
             # Job finished before any shutdown signal.
             shutdown_future.cancel()
-            await self._ack(job_json)
+            exc = job_task.exception()
+            if exc is None:
+                await self._ack(job_json)
+            else:
+                logger.error(
+                    f"Job {job_data.get('documentId')} raised {type(exc).__name__}: "
+                    f"{exc}. Leaving in processing list for boot-time recovery.",
+                )
             return True
 
         # Shutdown arrived while the job is still running.
@@ -361,8 +369,15 @@ class RFPWorker:
         )
 
         if job_task in done:
-            await self._ack(job_json)
-            logger.info(f"Job {doc_id} finished within grace period")
+            exc = job_task.exception()
+            if exc is None:
+                await self._ack(job_json)
+                logger.info(f"Job {doc_id} finished within grace period")
+            else:
+                logger.error(
+                    f"Job {doc_id} raised {type(exc).__name__} within grace period: "
+                    f"{exc}. Leaving in processing list for boot-time recovery.",
+                )
             return True
 
         # Grace period exceeded — cancel the task and leave the job
