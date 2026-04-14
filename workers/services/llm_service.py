@@ -27,6 +27,7 @@ from config import (
     RETRY_BASE_DELAY,
     RETRY_MAX_DELAY,
     LLM_TIMEOUT,
+    RISKS_CONTEXT_LIMIT,
 )
 from models import (
     RisksAnalysis,
@@ -121,7 +122,7 @@ class LLMService:
         if progress_publisher:
             await progress_publisher.publish("analyzing_questions")
 
-        risks_context = [r.dict() for r in risks_result.risks[:5]]
+        risks_context = [r.model_dump() for r in risks_result.risks[:RISKS_CONTEXT_LIMIT]]
 
         try:
             questions_result = await self._analyze_questions(
