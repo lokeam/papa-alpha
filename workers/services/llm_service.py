@@ -19,7 +19,17 @@ if TYPE_CHECKING:
     from utils.progress_publisher import ProgressPublisher
 from datetime import datetime
 
-from openai import AsyncOpenAI
+from openai import (
+    AsyncOpenAI,
+    AuthenticationError,
+    PermissionDeniedError,
+    BadRequestError,
+    NotFoundError,
+    RateLimitError,
+    APIConnectionError,
+    APITimeoutError,
+    APIStatusError,
+)
 
 from exceptions import AnalysisFailedError
 from config import (
