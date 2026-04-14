@@ -1,7 +1,6 @@
 import { NextRequest } from 'next/server';
 import Redis from 'ioredis';
-
-const LOCAL_REDIS_URL = 'redis://localhost:6379';
+import { REDIS_URL } from '@/app/lib/config';
 
 export async function GET(
   request: NextRequest,
@@ -10,7 +9,7 @@ export async function GET(
   const { documentId } = await params;
 
   // Create Redis clients
-  const redis = new Redis(process.env.REDIS_URL || LOCAL_REDIS_URL);
+  const redis = new Redis(REDIS_URL);
   const subscriber = redis.duplicate();
 
   const channel = `progress:${documentId}`;

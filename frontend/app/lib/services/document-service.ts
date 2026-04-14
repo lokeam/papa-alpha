@@ -3,6 +3,7 @@ import { QueueAdapter } from '@/app/lib/adapters/queue-adapter';
 import { DocumentRepository } from '@/app/lib/repositories/document-repository';
 import { ValidationError, QueueError } from '@/app/lib/utils/error-handler';
 import { generateStoragePath } from '@/app/lib/utils/storage';
+import { MAX_UPLOAD_FILE_SIZE, QUEUE_NAME } from '@/app/lib/config';
 
 
 export interface UploadResult {
@@ -11,9 +12,6 @@ export interface UploadResult {
   filename: string;
   status: string;
 }
-
-// Allow max pdf size of 50MB
-const MAX_SIZE = 50 * 1024 * 1024;
 
 export class DocumentService {
   private storage: StorageAdapter;
@@ -38,7 +36,7 @@ export class DocumentService {
     }
 
     // 2. Validate file size (50MB limit)
-    if (file.size > MAX_SIZE) {
+    if (file.size > MAX_UPLOAD_FILE_SIZE) {
       throw new ValidationError('File size must be less than 50MB');
     }
 
@@ -64,7 +62,7 @@ export class DocumentService {
 
     // 6. Queue analysis job
     try {
-      await this.queue.push('rfp-analysis-queue', {
+      await this.queue.push(QUEUE_NAME, {
         documentId: document.id,
         storagePath,
         filename: file.name,

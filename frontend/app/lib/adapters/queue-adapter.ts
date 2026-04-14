@@ -1,5 +1,6 @@
 import { Redis } from 'ioredis';
 import { QueueError } from '@/app/lib/utils/error-handler';
+import { REDIS_URL } from '@/app/lib/config';
 
 export interface AnalysisJob {
   documentId: string;
@@ -7,15 +8,11 @@ export interface AnalysisJob {
   filename: string;
 }
 
-const LOCAL_REDIS_URL = 'redis://localhost:6379';
-
 export class QueueAdapter {
   private client: Redis;
 
   constructor() {
-    this.client = new Redis(
-      process.env.REDIS_URL || LOCAL_REDIS_URL
-    );
+    this.client = new Redis(REDIS_URL);
   }
 
   async push(queue: string, job: AnalysisJob): Promise<void> {

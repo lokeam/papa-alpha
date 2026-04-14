@@ -7,6 +7,7 @@ import { motion } from "motion/react";
 import { useDropzone } from "react-dropzone";
 import { useTheme } from "next-themes";
 import { cn } from "@/components/ui/utils";
+import { MAX_UPLOAD_FILE_SIZE } from "@/app/lib/config";
 
 // Icons
 import { FileUploadIcon } from "@/components/ui/icons/FileUploadIcon";
@@ -34,8 +35,6 @@ const secondaryVariant = {
     borderColor: 'rgba(220, 38, 38, 1)',
   },
 };
-
-const MAX_UPLOAD_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
 export const FileUpload = ({
   onChange,
