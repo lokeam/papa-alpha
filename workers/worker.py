@@ -116,10 +116,14 @@ class RFPWorker:
             self.llm_service = LLMService()
 
     async def disconnect(self):
-        """Disconnect from Redis."""
+        """Disconnect from Redis and release Supabase client."""
         if self.redis_client:
             await self.redis_client.close()
             logger.info("Disconnected from Redis")
+
+        if self.supabase_client is not None:
+            self.supabase_client = None
+            logger.info("Released Supabase client")
 
     # ------------------------------------------------------------------
     # Reliable queue helpers
