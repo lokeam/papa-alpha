@@ -23,6 +23,7 @@ from config import (
     OPENAI_API_KEY,
     LLM_MODEL,
     LLM_PRICING,
+    LLM_TEMPERATURE,
     MAX_RETRIES,
     RETRY_BASE_DELAY,
     RETRY_MAX_DELAY,
@@ -310,7 +311,7 @@ class LLMService:
                         {"role": "user", "content": user_prompt}
                     ],
                     response_format={"type": "json_object"},
-                    temperature=0.1,  # Low temperature for consistency
+                    temperature=LLM_TEMPERATURE,
                 )
 
                 # Extract response
