@@ -17,7 +17,6 @@ type ActionButton = {
   label: string;
   icon?: 'file' | 'download' | 'share' | 'copy' | 'check' | 'pencil' | 'arrow' | 'sparkles';
   variant: 'primary' | 'success' | 'secondary';
-  onClick: () => void;
 };
 
 type ActionButtonsProps = {
@@ -82,10 +81,10 @@ export function ActionButtons({ actions }: ActionButtonsProps) {
         {actions.map((action, index) => (
           <button
             disabled
+            aria-disabled="true"
             key={index}
-            onClick={action.onClick}
             className={cn(
-              "px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 cursor-not-allowed",
+              "px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 cursor-not-allowed opacity-60",
               action.variant === 'secondary' && 'border'
             )}
             style={getButtonStyle(action.variant)}

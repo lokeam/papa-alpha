@@ -109,38 +109,33 @@ export function QuestionSidePanel({
 
       <div className="border-t" style={{ borderColor: 'hsl(var(--card-border))' }} />
 
-      <Tooltip content="Buttons disabled for demo purposes" side="top">
+      <Tooltip content="Feature not yet available" side="top">
         <ActionButtons
           actions={[
             {
               label: 'Copy Suggested Approach',
               icon: 'copy',
               variant: 'primary',
-              onClick: () => console.log('Copy')
             },
             {
               label: 'Mark as Addressed',
               icon: 'check',
               variant: 'success',
-              onClick: () => console.log('Mark addressed')
             },
             {
               label: 'Generate Alternative',
               icon: 'sparkles',
               variant: 'secondary',
-              onClick: () => console.log('Generate')
             },
             {
               label: 'Add Note',
               icon: 'pencil',
               variant: 'secondary',
-              onClick: () => console.log('Add note')
             },
             {
               label: 'Next Question →',
               icon: 'arrow',
               variant: 'secondary',
-              onClick: () => console.log('Next')
             }
           ]}
         />

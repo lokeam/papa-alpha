@@ -146,26 +146,23 @@ export function AccessibilitySidePanel({
       </div>
 
       <div className="border-t" style={{ borderColor: 'hsl(var(--card-border))' }} />
-      <Tooltip content="Buttons disabled for demo purposes" side="top">
+      <Tooltip content="Feature not yet available" side="top">
           <ActionButtons
             actions={[
               {
                 label: 'Download Full Report',
                 icon: 'file',
                 variant: 'primary',
-                onClick: () => console.log('Download')
               },
               {
                 label: 'Export to PDF',
                 icon: 'download',
                 variant: 'secondary',
-                onClick: () => console.log('Export')
               },
               {
                 label: 'Share Analysis',
                 icon: 'share',
                 variant: 'secondary',
-                onClick: () => console.log('Share')
               }
             ]}
           />

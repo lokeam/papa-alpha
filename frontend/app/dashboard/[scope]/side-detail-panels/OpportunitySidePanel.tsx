@@ -89,8 +89,12 @@ export function OpportunitySidePanel({
         <div className="p-4 rounded border text-sm whitespace-pre-wrap text-foreground" style={{ backgroundColor: theme === 'dark' ? '#27272a' : '#f4f4f5', borderColor: 'hsl(var(--card-border))' }}>
           {opportunity.suggestedLanguage}
         </div>
-        <Tooltip content="Buttons disabled for demo purposes" side="top">
-          <button className="mt-3 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors cursor-not-allowed">
+        <Tooltip content="Feature not yet available" side="top">
+          <button
+            disabled
+            aria-disabled="true"
+            className="mt-3 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium transition-colors cursor-not-allowed opacity-60"
+          >
             <CopyIcon className="w-5 h-5 mr-2 text-white" /> Copy This Text
           </button>
         </Tooltip>
@@ -118,7 +122,7 @@ export function OpportunitySidePanel({
 
       <div className="border-t" style={{ borderColor: 'hsl(var(--card-border))' }} />
 
-      <Tooltip content="Buttons disabled for demo purposes" side="top">
+      <Tooltip content="Feature not yet available" side="top">
         <div className="grid grid-cols-1 gap-2">
           <ActionButtons
             actions={[
@@ -126,31 +130,26 @@ export function OpportunitySidePanel({
                 label: 'Copy Suggested Language',
                 icon: 'copy',
                 variant: 'primary',
-                onClick: () => console.log('Copy')
               },
               {
                 label: 'Mark as Implemented',
                 icon: 'check',
                 variant: 'success',
-                onClick: () => console.log('Mark implemented')
               },
               {
                 label: 'Generate Alternative',
                 icon: 'sparkles',
                 variant: 'secondary',
-                onClick: () => console.log('Generate')
               },
               {
                 label: 'Add Note',
                 icon: 'pencil',
                 variant: 'secondary',
-                onClick: () => console.log('Add note')
               },
               {
                 label: 'Next Opportunity →',
                 icon: 'arrow',
                 variant: 'secondary',
-                onClick: () => console.log('Next')
               }
             ]}
           />
