@@ -46,9 +46,6 @@ export function useUpdateProgress(documentId: string | null) {
       eventSource.onerror = (err) => {
         console.error('SSE connection error:', err);
         eventSource?.close();
-
-        // Optionally retry connection
-        // setTimeout(() => connect(), 2000);
       };
     };
 
