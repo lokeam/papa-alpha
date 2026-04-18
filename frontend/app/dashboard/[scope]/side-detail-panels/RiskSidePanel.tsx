@@ -32,7 +32,6 @@ export function RiskSidePanel({
   onClose: () => void;
 }) {
   const { theme } = useTheme();
-  console.log('RiskDetail theme:', theme);
   const priorityColors = {
     high: 'text-rose-600 dark:text-rose-400 bg-rose-100 dark:bg-rose-950',
     medium: 'text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-950',

@@ -62,14 +62,11 @@ export function useDocumentAnalysis(
           url = '/api/documents/latest';
         }
 
-        console.log('[useDocumentAnalysis] Fetching from:', url);
         const response = await fetch(url);
-        console.log('[useDocumentAnalysis] Response status:', response.status);
 
         if (!response.ok) {
           // If no latest document found and redirect is enabled, go to upload
           if (!documentId && response.status === 404 && redirectOnMissing) {
-            console.log('[useDocumentAnalysis] No completed documents found, redirecting to /upload');
             router.push('/upload');
             return;
           }
@@ -91,11 +88,9 @@ export function useDocumentAnalysis(
         }
 
         setDocument(data);
-        console.log('[useDocumentAnalysis] Document loaded:', data.id, data.filename);
 
         // If we loaded latest document, update URL to include its ID
         if (!documentId && data.id) {
-          console.log('[useDocumentAnalysis] Updating URL with documentId:', data.id);
           router.replace(`/dashboard?documentId=${data.id}`, { scroll: false });
         }
       } catch (err) {

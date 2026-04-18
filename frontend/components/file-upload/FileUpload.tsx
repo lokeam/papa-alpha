@@ -99,9 +99,6 @@ export const FileUpload = ({
     multiple: false,
     noClick: true,
     onDrop: handleFileChange,
-    onDropRejected: (error) => {
-      console.log(error);
-    },
   });
 
   return (
@@ -232,8 +229,6 @@ export const FileUpload = ({
                         : '0px 10px 50px rgba(0,0,0,0.1)'),
                     transition: 'box-shadow 550ms cubic-bezier(0.4, 0, 0.2, 1)'
                   }}
-                  onAnimationStart={() => console.log('Main variant animation started')}
-                  onAnimationComplete={() => console.log('Main variant animation completed')}
                 >
                   {isDragActive ? (
                     <motion.p
@@ -255,8 +250,6 @@ export const FileUpload = ({
                   animate={isDragActive ? "animate" : "initial"}
                   variants={secondaryVariant}
                   className="absolute border border-dashed inset-0 z-0 bg-transparent rounded-md pointer-events-none"
-                  onAnimationStart={() => console.log('Secondary variant animation started', { isDragActive })}
-                  onAnimationComplete={(definition) => console.log('Secondary variant animation completed', { definition, isDragActive })}
                 ></motion.div>
               </div>
             )}
