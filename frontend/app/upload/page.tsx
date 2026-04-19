@@ -30,8 +30,8 @@ export default function UploadPage() {
         // Active job exists, redirect to processing page
         router.push(`/processing/${data.documentId}`);
       }
-    } catch (error) {
-      console.error('Failed to check for active job: ', error);
+    } catch {
+      // Active-job check is best-effort; fall through to the upload UI.
     } finally {
       setIsCheckingActiveJob(false);
     }
@@ -86,7 +86,6 @@ export default function UploadPage() {
       // Redirect to processing page
       router.push(`/processing/${result.documentId}`);
     } catch (err) {
-      console.error('Upload failed:', err);
       setError(err instanceof Error ? err.message : 'Failed to upload file. Please try again.');
       setIsUploading(false);
     }

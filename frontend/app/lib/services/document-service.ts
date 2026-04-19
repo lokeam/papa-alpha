@@ -56,7 +56,7 @@ export class DocumentService {
       });
     } catch (error) {
       // Rollback: delete uploaded file
-      await this.storage.delete(storagePath).catch(console.error);
+      await this.storage.delete(storagePath).catch(() => undefined);
       throw error;
     }
 
@@ -69,8 +69,8 @@ export class DocumentService {
       });
     } catch (error) {
       // Rollback: delete database record and storage object
-      await this.repository.delete(document.id).catch(console.error);
-      await this.storage.delete(storagePath).catch(console.error);
+      await this.repository.delete(document.id).catch(() => undefined);
+      await this.storage.delete(storagePath).catch(() => undefined);
       throw new QueueError('Analysis queue is temporarily unavailable', error);
     }
 

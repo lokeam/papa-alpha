@@ -51,8 +51,7 @@ export default function ProcessingPage({ params }: ProcessingPageProps) {
         if (data.status === 'failed') {
           setError(data.error_message || 'Analysis failed');
         }
-      } catch (err) {
-        console.error('Failed to fetch document:', err);
+      } catch {
         setError('Failed to load document');
       } finally {
         setIsLoading(false);

@@ -29,8 +29,6 @@ export class QueueError extends Error {
 }
 
 export function handleApiError(error: unknown) {
-  console.error('API Error: ', error);
-
   if (error instanceof ValidationError) {
     return NextResponse.json(
       { error: error.message },
