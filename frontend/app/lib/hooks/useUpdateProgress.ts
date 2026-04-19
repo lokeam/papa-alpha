@@ -8,6 +8,16 @@ export interface ProgressUpdate {
   error?: boolean;
 }
 
+function isProgressUpdate(value: unknown): value is ProgressUpdate {
+  if (typeof value !== 'object' || value === null) return false;
+  const v = value as Record<string, unknown>;
+  return (
+    typeof v.step === 'string' &&
+    typeof v.progress === 'number' &&
+    typeof v.message === 'string'
+  );
+}
+
 export function useUpdateProgress(documentId: string | null) {
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState('Initializing...');
@@ -23,28 +33,31 @@ export function useUpdateProgress(documentId: string | null) {
       eventSource = new EventSource(`/api/progress/${documentId}`);
 
       eventSource.onmessage = (event) => {
+        let parsed: unknown;
         try {
-          const data: ProgressUpdate = JSON.parse(event.data);
+          parsed = JSON.parse(event.data);
+        } catch {
+          return;
+        }
 
-          setProgress(data.progress);
-          setCurrentStep(data.message);
+        if (!isProgressUpdate(parsed)) return;
+        const data = parsed;
 
-          if (data.step === 'completed') {
-            setIsComplete(true);
-            eventSource?.close();
-          }
+        setProgress(data.progress);
+        setCurrentStep(data.message);
 
-          if (data.step === 'error' || data.error) {
-            setError(data.message);
-            eventSource?.close();
-          }
-        } catch (err) {
-          console.error('Failed to parse progress update:', err);
+        if (data.step === 'completed') {
+          setIsComplete(true);
+          eventSource?.close();
+        }
+
+        if (data.step === 'error' || data.error) {
+          setError(data.message);
+          eventSource?.close();
         }
       };
 
-      eventSource.onerror = (err) => {
-        console.error('SSE connection error:', err);
+      eventSource.onerror = () => {
         eventSource?.close();
       };
     };

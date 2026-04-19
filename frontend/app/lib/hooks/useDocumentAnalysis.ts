@@ -71,11 +71,21 @@ export function useDocumentAnalysis(
             return;
           }
           const errorData = await response.json().catch(() => ({}));
-          console.error('[useDocumentAnalysis] Fetch failed:', response.status, errorData);
           throw new Error(errorData.error || 'Document not found');
         }
 
-        const data: DocumentWithAnalysis = await response.json();
+        const parsed: unknown = await response.json();
+
+        if (
+          typeof parsed !== 'object' ||
+          parsed === null ||
+          typeof (parsed as { id?: unknown }).id !== 'string' ||
+          typeof (parsed as { status?: unknown }).status !== 'string'
+        ) {
+          throw new Error('Document response malformed');
+        }
+
+        const data = parsed as DocumentWithAnalysis;
 
         // Surface failed status with the actual error message
         if (data.status === 'failed') {
@@ -94,7 +104,6 @@ export function useDocumentAnalysis(
           router.replace(`/dashboard?documentId=${data.id}`, { scroll: false });
         }
       } catch (err) {
-        console.error('Failed to fetch document:', err);
         setError(err instanceof Error ? err.message : 'Failed to load document');
       } finally {
         setIsLoading(false);
