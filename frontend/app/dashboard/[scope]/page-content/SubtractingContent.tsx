@@ -216,7 +216,6 @@ export function SubcontractingContent({ analysis }: { analysis: AnalysisResults 
             opportunity={selectedOpportunity}
             expandedSections={expandedSections}
             onToggleSection={toggleSection}
-            onClose={() => setSelectedOpportunity(null)}
           />
         )}
       </AnalysisResultsLayout.Detail>

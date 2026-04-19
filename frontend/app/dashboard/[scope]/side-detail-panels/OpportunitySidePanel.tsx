@@ -28,7 +28,6 @@ export function OpportunitySidePanel({
   opportunity: Opportunity;
   expandedSections: Record<string, boolean>;
   onToggleSection: (section: string) => void;
-  onClose: () => void;
 }) {
   const { theme } = useTheme();
   return (

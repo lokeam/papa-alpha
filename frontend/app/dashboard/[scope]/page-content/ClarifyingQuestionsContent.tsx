@@ -219,7 +219,6 @@ export function ClarifyingQuestionsContent({ analysis }: { analysis: AnalysisRes
             question={selectedQuestion}
             expandedSections={expandedSections}
             onToggleSection={toggleSection}
-            onClose={() => setSelectedQuestion(null)}
           />
         )}
       </AnalysisResultsLayout.Detail>

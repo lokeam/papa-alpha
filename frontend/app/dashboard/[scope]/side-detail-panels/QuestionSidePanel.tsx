@@ -24,7 +24,6 @@ export function QuestionSidePanel({
   question: Question;
   expandedSections: Record<string, boolean>;
   onToggleSection: (section: string) => void;
-  onClose: () => void;
 }) {
   return (
     <div className="space-y-6">
