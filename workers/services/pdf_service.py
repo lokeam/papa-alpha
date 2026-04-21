@@ -1,10 +1,9 @@
 """PDF download and text extraction service"""
 
-import os
-import tempfile
 import logging
+import os
 from pathlib import Path
-from typing import Optional
+
 import pdfplumber
 from supabase import Client
 
@@ -24,33 +23,31 @@ class PDFService:
     self.supabase = supabase_client
     self.bucket = storage_bucket
 
-  def download_pdf(self, storage_path: str) -> str:
-    """Download PDF from Supabase Storage to temp file
+  def download_pdf(self, storage_path: str, workdir: str) -> str:
+    """Download PDF from Supabase Storage into the supplied workdir.
+
       Accepts:
         storage_path: Path in storage bucket (e.g., "uploads/file.pdf")
+        workdir: Caller-owned directory; lifecycle is managed by the caller
+                 (typically a tempfile.TemporaryDirectory context manager)
 
       Returns:
+        Absolute path to the downloaded PDF inside workdir.
+
+      Raises:
         Exception: If download fails
     """
     logger.info(f"Downloading PDF from storage: {storage_path}")
 
     try:
-      # Download file from Supabase Storage
       response = self.supabase.storage.from_(self.bucket).download(storage_path)
 
-      # Create temp file
-      temp_file = tempfile.NamedTemporaryFile(
-        delete=False,
-        suffix=".pdf",
-        prefix="rfp_"
-      )
+      filename = os.path.basename(storage_path) or "rfp.pdf"
+      pdf_path = Path(workdir) / filename
+      pdf_path.write_bytes(response)
 
-      # Write bytes to temp file
-      temp_file.write(response)
-      temp_file.close()
-
-      logger.info(f"PDF downloaded to: {temp_file.name}")
-      return temp_file.name
+      logger.info(f"PDF downloaded to: {pdf_path}")
+      return str(pdf_path)
 
     except Exception as e:
       logger.error(f"Failed to download PDF from {storage_path}: {e}")
@@ -97,18 +94,3 @@ class PDFService:
     except Exception as e:
         logger.error(f"Failed to extract text from {pdf_path}: {e}")
         raise
-
-
-  def cleanup_temp_file(self, pdf_path: str) -> None:
-    """Clean up temporary PDF file
-
-    Accepts:
-        pdf_path: Path to the temporary PDF file to delete
-    """
-    try:
-        if os.path.exists(pdf_path):
-            os.unlink(pdf_path)
-            logger.debug(f"Cleaned up temp file: {pdf_path}")
-
-    except Exception as e:
-        logger.warning(f"Failed to clean up temp file {pdf_path}: {e}")
