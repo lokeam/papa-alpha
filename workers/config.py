@@ -57,6 +57,8 @@ WORKER_ID = os.getenv("WORKER_ID") or os.getenv("HOSTNAME")
 WORKER_SHUTDOWN_GRACE_SECONDS = int(
     os.getenv("WORKER_SHUTDOWN_GRACE_SECONDS", "600")
 )
+WORKER_HEALTH_PORT = int(os.getenv("WORKER_HEALTH_PORT", "8080"))
+WORKER_HEALTH_HOST = os.getenv("WORKER_HEALTH_HOST", "0.0.0.0")
 
 # ============================================================================
 # Queue Config
@@ -114,6 +116,17 @@ _REQUIRED_VARS = (
     "REDIS_URL",
 )
 
+_CONFIG_VALIDATED = False
+
+
+def is_config_validated() -> bool:
+    """Whether validate_config() has completed successfully in this process.
+
+    Used by the readiness endpoint to confirm secrets were checked at boot,
+    so /readyz never has to make a network call to OpenAI.
+    """
+    return _CONFIG_VALIDATED
+
 
 def validate_config() -> None:
     """Assert every required secret is present and URL-shaped values parse.
@@ -122,6 +135,8 @@ def validate_config() -> None:
     On any failure: emit a single CRITICAL line naming every missing/invalid
     variable, then sys.exit(1). No network calls — reachability is /readyz's job.
     """
+    global _CONFIG_VALIDATED
+
     errors: list[str] = []
 
     for name in _REQUIRED_VARS:
@@ -137,3 +152,5 @@ def validate_config() -> None:
     if errors:
         logger.critical("Worker config invalid: %s", "; ".join(errors))
         sys.exit(1)
+
+    _CONFIG_VALIDATED = True
