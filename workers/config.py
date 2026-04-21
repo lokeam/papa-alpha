@@ -1,6 +1,11 @@
 """Worker configuration and constants"""
 
+import logging
 import os
+import sys
+from urllib.parse import urlparse
+
+logger = logging.getLogger(__name__)
 
 
 # ============================================================================
@@ -95,3 +100,40 @@ PROGRESS_MESSAGES = {
 
 # Redis channel prefix for progress updates
 PROGRESS_CHANNEL_PREFIX = "progress"
+
+
+# ============================================================================
+# Boot-time Config Validation
+# ============================================================================
+
+_URL_VARS = ("SUPABASE_URL", "REDIS_URL")
+_REQUIRED_VARS = (
+    "SUPABASE_URL",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "OPENAI_API_KEY",
+    "REDIS_URL",
+)
+
+
+def validate_config() -> None:
+    """Assert every required secret is present and URL-shaped values parse.
+
+    Called from the worker entrypoint before any connection is attempted.
+    On any failure: emit a single CRITICAL line naming every missing/invalid
+    variable, then sys.exit(1). No network calls — reachability is /readyz's job.
+    """
+    errors: list[str] = []
+
+    for name in _REQUIRED_VARS:
+        value = globals().get(name)
+        if value is None or not str(value).strip():
+            errors.append(f"{name} is missing or empty")
+            continue
+        if name in _URL_VARS:
+            parsed = urlparse(str(value))
+            if not parsed.scheme or not parsed.netloc:
+                errors.append(f"{name} is not a valid URL: {value!r}")
+
+    if errors:
+        logger.critical("Worker config invalid: %s", "; ".join(errors))
+        sys.exit(1)
