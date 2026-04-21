@@ -98,8 +98,6 @@ class RFPWorker:
 
         needs_supabase = self.storage_service is None or self.pdf_service is None
         if needs_supabase and self.supabase_client is None:
-            if not SUPABASE_SERVICE_ROLE_KEY:
-                raise ValueError("SUPABASE_SERVICE_ROLE_KEY environment variable not provided")
             self.supabase_client = create_client(
                 SUPABASE_URL.rstrip('/') + '/',
                 SUPABASE_SERVICE_ROLE_KEY,

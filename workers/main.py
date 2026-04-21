@@ -9,6 +9,7 @@ import logging
 import signal
 import sys
 
+from config import validate_config
 from worker import RFPWorker
 
 # ============================================================================
@@ -51,6 +52,7 @@ async def _run_worker():
 
 
 if __name__ == "__main__":
+    validate_config()
     try:
         asyncio.run(_run_worker())
     except KeyboardInterrupt:
