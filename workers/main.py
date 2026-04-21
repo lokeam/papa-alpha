@@ -9,7 +9,13 @@ import logging
 import signal
 import sys
 
-from config import validate_config
+from config import (
+    WORKER_HEALTH_HOST,
+    WORKER_HEALTH_PORT,
+    is_config_validated,
+    validate_config,
+)
+from health import HealthServer
 from worker import RFPWorker
 
 # ============================================================================
@@ -26,12 +32,46 @@ logger = logging.getLogger(__name__)
 
 
 # ============================================================================
+# Health Server Wiring
+# ============================================================================
+def _build_health_server(worker: RFPWorker) -> HealthServer:
+    """Wire dependency checks against the live worker connections.
+
+    Supabase is sync until Phase 5; offload its check to a thread so the
+    event loop (and /healthz) remain responsive.
+    """
+    async def check_redis() -> None:
+        await worker.redis_client.ping()
+
+    async def check_supabase() -> None:
+        client = worker.supabase_client
+        if client is None:
+            raise RuntimeError("supabase client not initialized")
+
+        def _probe() -> None:
+            client.table("documents").select("id").limit(1).execute()
+
+        await asyncio.to_thread(_probe)
+
+    return HealthServer(
+        check_redis=check_redis,
+        check_supabase=check_supabase,
+        is_config_validated=is_config_validated,
+        port=WORKER_HEALTH_PORT,
+        host=WORKER_HEALTH_HOST,
+    )
+
+
+# ============================================================================
 # Main Entry Point
 # ============================================================================
 async def _run_worker():
     """Create, connect, and run the worker with graceful-shutdown wiring."""
     worker = RFPWorker()
     worker.connect()
+
+    health_server = _build_health_server(worker)
+    await health_server.start()
 
     loop = asyncio.get_running_loop()
 
@@ -47,6 +87,7 @@ async def _run_worker():
     except asyncio.CancelledError:
         logger.info("Worker run cancelled")
     finally:
+        await health_server.stop()
         await worker.disconnect()
         logger.info("Worker stopped gracefully")
 
