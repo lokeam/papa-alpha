@@ -3,6 +3,7 @@
 import json
 import pytest
 
+from config import WORKER_MAX_JOB_ATTEMPTS
 from exceptions import AnalysisFailedError
 from tests.conftest import make_job, job_json
 from tests.fakes import FakeLLMService
@@ -116,9 +117,9 @@ async def test_process_job_acks_processing_list_in_finally(
 async def test_process_job_analysis_failed_error_includes_category(
     worker, redis_client, storage_service
 ):
-    """AnalysisFailedError from LLM service → document failed with category in message."""
+    """AnalysisFailedError on the *final* retry → document failed with
+    category-bearing error message and a DLQ entry."""
     doc_id = "cat-fail-001"
-    raw = job_json(doc_id)
     storage_service.seed(doc_id)
 
     cause = RuntimeError("rate limit exceeded")
@@ -127,9 +128,11 @@ async def test_process_job_analysis_failed_error_includes_category(
         error=AnalysisFailedError("risks", cause),
     )
 
+    # Submit on the last allowed attempt so the failure routes to DLQ.
+    job_data = make_job(doc_id, attempts=WORKER_MAX_JOB_ATTEMPTS - 1)
+    raw = json.dumps(job_data)
     await redis_client.lpush(worker.processing_list, raw)
 
-    job_data = make_job(doc_id)
     try:
         await worker.process_job(job_data)
     finally:
@@ -139,3 +142,10 @@ async def test_process_job_analysis_failed_error_includes_category(
     error_msg = storage_service.documents[doc_id]["error_message"]
     assert "risks" in error_msg
     assert "rate limit exceeded" in error_msg
+
+    # And the envelope landed in the DLQ.
+    dlq_entries = await redis_client.lrange(worker.dlq_name, 0, -1)
+    assert len(dlq_entries) == 1
+    envelope = json.loads(dlq_entries[0])
+    assert envelope["payload"]["documentId"] == doc_id
+    assert envelope["attempts"] == WORKER_MAX_JOB_ATTEMPTS

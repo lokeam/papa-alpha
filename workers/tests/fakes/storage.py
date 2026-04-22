@@ -23,6 +23,12 @@ class FakeStorageService:
             "error_message": None,
         }
 
+    def get_status(self, document_id: str) -> Optional[str]:
+        row = self.documents.get(document_id)
+        if row is None:
+            return None
+        return row.get("status")
+
     def mark_processing(self, document_id: str) -> None:
         self._ensure_exists(document_id)
         self.documents[document_id]["status"] = "processing"
