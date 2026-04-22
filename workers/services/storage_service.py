@@ -5,6 +5,8 @@ from typing import Dict, Any, Optional, Union
 from supabase import Client
 from pydantic import BaseModel
 
+from exceptions import StorageError
+
 logger = logging.getLogger(__name__)
 
 class StorageService:
@@ -17,6 +19,32 @@ class StorageService:
         supabase_client: Supabase client instance
     """
     self.supabase = supabase_client
+
+
+  def get_status(self, document_id: str) -> Optional[str]:
+    """Fetch the current status for a document.
+
+    Returns None if the row does not exist.
+
+    Raises:
+        StorageError: if the underlying Supabase call fails.
+    """
+    try:
+        response = (
+            self.supabase
+            .table("documents")
+            .select("status")
+            .eq("id", document_id)
+            .limit(1)
+            .execute()
+        )
+        rows = response.data or []
+        if not rows:
+            return None
+        return rows[0].get("status")
+    except Exception as e:
+        logger.error(f"Failed to fetch status for {document_id}: {e}")
+        raise StorageError(f"get_status({document_id}) failed: {e}") from e
 
 
   def update_document(
@@ -37,7 +65,7 @@ class StorageService:
         error_message: Error message if status is 'failed'
 
     Raises:
-        Exception: If update fails
+        StorageError: If update fails
     """
     try:
         update_data = {}
@@ -65,9 +93,11 @@ class StorageService:
         affected_rows = len(response.data) if response.data else 0
         logger.info(f"✓ Document {document_id} updated successfully (rows: {affected_rows})")
 
+    except StorageError:
+        raise
     except Exception as e:
         logger.error(f"Failed to update document {document_id}: {e}")
-        raise
+        raise StorageError(f"update_document({document_id}) failed: {e}") from e
 
   def mark_processing(self, document_id: str) -> None:
     """Mark document as processing
