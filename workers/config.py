@@ -78,6 +78,11 @@ WORKER_MAX_JOB_ATTEMPTS = int(os.getenv("WORKER_MAX_JOB_ATTEMPTS", "3"))
 
 STORAGE_BUCKET = "documents"
 
+# Per-call timeout for Supabase requests (database + storage). Anything that
+# exceeds this raises asyncio.TimeoutError, which the worker classifies as
+# retryable so the job cycles through the retry budget instead of hanging.
+SUPABASE_TIMEOUT_SECONDS = int(os.getenv("SUPABASE_TIMEOUT_SECONDS", "30"))
+
 # ============================================================================
 # Progress Tracking Config
 # ============================================================================
