@@ -7,6 +7,7 @@ import tempfile
 import uuid
 from typing import Any, Dict, Optional
 
+import structlog
 from redis.asyncio import Redis
 from redis.exceptions import RedisError, ConnectionError as RedisConnectionError, TimeoutError as RedisTimeoutError
 from supabase import create_client, Client
@@ -176,87 +177,95 @@ class RFPWorker:
         storage_path = job_data.get('storagePath')
         filename = job_data.get('filename')
 
-        logger.info(f"Processing job for document {document_id}: {filename}")
-
-        progress = ProgressPublisher(self.redis_client, document_id)
-
+        # Bind document_id for the lifetime of this job so every log line —
+        # including ones from LLMService and other awaited callees — carries
+        # it. Unbound in the finally so subsequent jobs (or idle poll-loop
+        # logging) don't inherit a stale id.
+        structlog.contextvars.bind_contextvars(document_id=document_id)
         try:
-            with tempfile.TemporaryDirectory(prefix="rfp_") as workdir:
-                # Mark as processing
-                self.storage_service.mark_processing(document_id)
-                await progress.publish("uploaded")
+            logger.info(f"Processing job for document {document_id}: {filename}")
 
-                # Step 1: Download PDF
-                logger.info(f"Downloading PDF from {storage_path}")
-                pdf_path = self.pdf_service.download_pdf(storage_path, workdir=workdir)
-
-                # Step 2: Extract text
-                logger.info("Extracting text from PDF")
-                await progress.publish("extracting_text")
-                extracted_text = self.pdf_service.extract_text(pdf_path)
-                logger.info(f"Extracted {len(extracted_text)} characters")
-
-                # Step 3: Run LLM analysis (async)
-                logger.info("Starting LLM analysis (4 categories)...")
-                analysis_results = await self.llm_service.analyze_rfp(
-                    document_id=document_id,
-                    full_text=extracted_text,
-                    progress_publisher=progress,
-                )
-
-                # Step 4: Prepare LLM usage metrics
-                input_tokens = 0
-                output_tokens = 0
-                for category_usage in [
-                    analysis_results.cost_breakdown.risks,
-                    analysis_results.cost_breakdown.accessibility,
-                    analysis_results.cost_breakdown.questions,
-                    analysis_results.cost_breakdown.subcontracting,
-                ]:
-                    if category_usage:
-                        input_tokens += category_usage.input_tokens
-                        output_tokens += category_usage.output_tokens
-
-                llm_usage = {
-                    "total_tokens": analysis_results.total_tokens,
-                    "input_tokens": input_tokens,
-                    "output_tokens": output_tokens,
-                    "total_cost_usd": analysis_results.total_cost_usd,
-                    "processing_time_seconds": analysis_results.processing_time_seconds,
-                    "model": DEFAULT_LLM_MODEL,
-                    "categories_completed": 100.0,
-                }
-
-                # Step 5: Update database with results
-                logger.info(
-                    f"Analysis complete: {analysis_results.processing_time_seconds:.1f}s, "
-                    f"${analysis_results.total_cost_usd:.4f}, "
-                    f"{analysis_results.get_success_rate():.0f}% success"
-                )
-
-                self.storage_service.mark_completed(
-                    document_id=document_id,
-                    analysis_results=analysis_results,
-                    llm_usage=llm_usage,
-                )
-
-                await progress.publish("completed")
-                logger.info(f"Job {document_id} completed successfully")
-
-        except Exception as e:
-            error_msg = f"Error processing job {document_id}: {str(e)}"
-            logger.error(error_msg, exc_info=True)
+            progress = ProgressPublisher(self.redis_client, document_id)
 
             try:
-                await progress.publish_error(error_msg)
-            except RedisError:
-                pass  # Best-effort progress publishing
+                with tempfile.TemporaryDirectory(prefix="rfp_") as workdir:
+                    # Mark as processing
+                    self.storage_service.mark_processing(document_id)
+                    await progress.publish("uploaded")
 
-            try:
-                self.storage_service.mark_failed(document_id, error_msg)
-            except Exception as db_error:
-                logger.error(f"Failed to update error status: {db_error}")
-                raise
+                    # Step 1: Download PDF
+                    logger.info(f"Downloading PDF from {storage_path}")
+                    pdf_path = self.pdf_service.download_pdf(storage_path, workdir=workdir)
+
+                    # Step 2: Extract text
+                    logger.info("Extracting text from PDF")
+                    await progress.publish("extracting_text")
+                    extracted_text = self.pdf_service.extract_text(pdf_path)
+                    logger.info(f"Extracted {len(extracted_text)} characters")
+
+                    # Step 3: Run LLM analysis (async)
+                    logger.info("Starting LLM analysis (4 categories)...")
+                    analysis_results = await self.llm_service.analyze_rfp(
+                        document_id=document_id,
+                        full_text=extracted_text,
+                        progress_publisher=progress,
+                    )
+
+                    # Step 4: Prepare LLM usage metrics
+                    input_tokens = 0
+                    output_tokens = 0
+                    for category_usage in [
+                        analysis_results.cost_breakdown.risks,
+                        analysis_results.cost_breakdown.accessibility,
+                        analysis_results.cost_breakdown.questions,
+                        analysis_results.cost_breakdown.subcontracting,
+                    ]:
+                        if category_usage:
+                            input_tokens += category_usage.input_tokens
+                            output_tokens += category_usage.output_tokens
+
+                    llm_usage = {
+                        "total_tokens": analysis_results.total_tokens,
+                        "input_tokens": input_tokens,
+                        "output_tokens": output_tokens,
+                        "total_cost_usd": analysis_results.total_cost_usd,
+                        "processing_time_seconds": analysis_results.processing_time_seconds,
+                        "model": DEFAULT_LLM_MODEL,
+                        "categories_completed": 100.0,
+                    }
+
+                    # Step 5: Update database with results
+                    logger.info(
+                        f"Analysis complete: {analysis_results.processing_time_seconds:.1f}s, "
+                        f"${analysis_results.total_cost_usd:.4f}, "
+                        f"{analysis_results.get_success_rate():.0f}% success"
+                    )
+
+                    self.storage_service.mark_completed(
+                        document_id=document_id,
+                        analysis_results=analysis_results,
+                        llm_usage=llm_usage,
+                    )
+
+                    await progress.publish("completed")
+                    logger.info(f"Job {document_id} completed successfully")
+
+            except Exception as e:
+                error_msg = f"Error processing job {document_id}: {str(e)}"
+                logger.error(error_msg, exc_info=True)
+
+                try:
+                    await progress.publish_error(error_msg)
+                except RedisError:
+                    pass  # Best-effort progress publishing
+
+                try:
+                    self.storage_service.mark_failed(document_id, error_msg)
+                except Exception as db_error:
+                    logger.error(f"Failed to update error status: {db_error}")
+                    raise
+        finally:
+            structlog.contextvars.unbind_contextvars("document_id")
 
     # ------------------------------------------------------------------
     # Main loop

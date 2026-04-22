@@ -143,3 +143,72 @@ def test_configure_logging_is_idempotent():
 
     records = _captured_records(buf)
     assert len(records) == 1
+
+
+# ---------------------------------------------------------------------------
+# Integration: process_job binds and clears document_id around the job
+# ---------------------------------------------------------------------------
+
+import pytest_asyncio  # noqa: E402
+
+from tests.conftest import make_job  # noqa: E402
+
+
+@pytest_asyncio.fixture
+async def configured_worker(worker, storage_service):
+    """Worker with happy-path fakes seeded for the doc id used in tests."""
+    storage_service.seed("ctx-001")
+    return worker
+
+
+@pytest.mark.asyncio
+async def test_process_job_binds_and_unbinds_document_id(configured_worker):
+    """document_id is in contextvars during the job and gone after.
+
+    Validates that subsequent jobs (or idle poll-loop log lines) do not
+    inherit a stale document_id.
+    """
+    seen_during_job: dict[str, object] = {}
+
+    original_mark_processing = configured_worker.storage_service.mark_processing
+
+    def spy_mark_processing(doc_id):
+        # Snapshot contextvars *during* the job — this runs while
+        # process_job is mid-flight.
+        seen_during_job.update(structlog.contextvars.get_contextvars())
+        return original_mark_processing(doc_id)
+
+    configured_worker.storage_service.mark_processing = spy_mark_processing
+
+    # Sanity: nothing bound before the job
+    assert "document_id" not in structlog.contextvars.get_contextvars()
+
+    await configured_worker.process_job(make_job("ctx-001"))
+
+    # During the job, document_id was bound
+    assert seen_during_job.get("document_id") == "ctx-001"
+
+    # After the job, document_id is gone (no leak)
+    assert "document_id" not in structlog.contextvars.get_contextvars()
+
+
+@pytest.mark.asyncio
+async def test_process_job_unbinds_document_id_on_failure(
+    worker, redis_client, storage_service
+):
+    """Even when the job fails, document_id is unbound in finally."""
+    from tests.fakes import FakeLLMService
+
+    doc_id = "ctx-fail-001"
+    storage_service.seed(doc_id)
+    worker.llm_service = FakeLLMService(
+        behavior="raise",
+        error=RuntimeError("boom"),
+    )
+
+    assert "document_id" not in structlog.contextvars.get_contextvars()
+
+    await worker.process_job(make_job(doc_id))
+
+    # After failure path runs (mark_failed), document_id must still be cleared
+    assert "document_id" not in structlog.contextvars.get_contextvars()
