@@ -9,6 +9,8 @@ import logging
 import signal
 import sys
 
+import structlog
+
 from config import (
     WORKER_HEALTH_HOST,
     WORKER_HEALTH_PORT,
@@ -16,18 +18,9 @@ from config import (
     validate_config,
 )
 from health import HealthServer
+from logging_config import configure_logging
 from worker import RFPWorker
 
-# ============================================================================
-# Logging Setup
-# ============================================================================
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(sys.stdout)
-    ]
-)
 logger = logging.getLogger(__name__)
 
 
@@ -68,6 +61,7 @@ def _build_health_server(worker: RFPWorker) -> HealthServer:
 async def _run_worker():
     """Create, connect, and run the worker with graceful-shutdown wiring."""
     worker = RFPWorker()
+    structlog.contextvars.bind_contextvars(worker_id=worker.worker_id)
     worker.connect()
 
     health_server = _build_health_server(worker)
@@ -93,6 +87,7 @@ async def _run_worker():
 
 
 if __name__ == "__main__":
+    configure_logging()
     validate_config()
     try:
         asyncio.run(_run_worker())
