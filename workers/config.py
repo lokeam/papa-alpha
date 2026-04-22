@@ -66,7 +66,11 @@ WORKER_HEALTH_HOST = os.getenv("WORKER_HEALTH_HOST", "0.0.0.0")
 
 QUEUE_NAME = "rfp-analysis-queue"
 PROCESSING_LIST_PREFIX = "rfp-analysis-processing"
+DLQ_NAME = "rfp-analysis-dlq"
 QUEUE_POLL_TIMEOUT = 5  # seconds
+
+# Maximum attempts for a retryable failure before the job lands in the DLQ.
+WORKER_MAX_JOB_ATTEMPTS = int(os.getenv("WORKER_MAX_JOB_ATTEMPTS", "3"))
 
 # ============================================================================
 # Storage Config
