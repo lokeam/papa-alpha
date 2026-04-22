@@ -92,7 +92,7 @@ async def test_process_job_acks_processing_list_in_finally(
     storage_service.seed(doc_id)
 
     # Make mark_completed blow up
-    def exploding_mark_completed(*args, **kwargs):
+    async def exploding_mark_completed(*args, **kwargs):
         raise RuntimeError("Supabase timeout")
 
     storage_service.mark_completed = exploding_mark_completed

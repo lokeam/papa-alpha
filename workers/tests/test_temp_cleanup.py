@@ -33,7 +33,7 @@ class WorkdirTrackingPDFService(FakePDFService):
         self.raise_in_download_after_write = raise_in_download_after_write
         self.workdirs_seen: list[str] = []
 
-    def download_pdf(self, storage_path: str, workdir: str) -> str:
+    async def download_pdf(self, storage_path: str, workdir: str) -> str:
         self.download_calls.append(storage_path)
         self.workdirs_seen.append(workdir)
 

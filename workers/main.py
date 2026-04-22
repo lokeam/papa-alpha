@@ -28,11 +28,7 @@ logger = logging.getLogger(__name__)
 # Health Server Wiring
 # ============================================================================
 def _build_health_server(worker: RFPWorker) -> HealthServer:
-    """Wire dependency checks against the live worker connections.
-
-    Supabase is sync until Phase 5; offload its check to a thread so the
-    event loop (and /healthz) remain responsive.
-    """
+    """Wire dependency checks against the live worker connections."""
     async def check_redis() -> None:
         await worker.redis_client.ping()
 
@@ -40,11 +36,7 @@ def _build_health_server(worker: RFPWorker) -> HealthServer:
         client = worker.supabase_client
         if client is None:
             raise RuntimeError("supabase client not initialized")
-
-        def _probe() -> None:
-            client.table("documents").select("id").limit(1).execute()
-
-        await asyncio.to_thread(_probe)
+        await client.table("documents").select("id").limit(1).execute()
 
     return HealthServer(
         check_redis=check_redis,
@@ -62,7 +54,7 @@ async def _run_worker():
     """Create, connect, and run the worker with graceful-shutdown wiring."""
     worker = RFPWorker()
     structlog.contextvars.bind_contextvars(worker_id=worker.worker_id)
-    worker.connect()
+    await worker.connect()
 
     health_server = _build_health_server(worker)
     await health_server.start()

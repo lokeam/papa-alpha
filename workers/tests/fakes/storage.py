@@ -1,14 +1,19 @@
-"""Fake StorageService — in-memory state machine mirroring the real schema."""
+"""Fake StorageService — in-memory state machine mirroring the real schema.
+
+Mirrors the (now async) public surface of services.storage_service.StorageService
+so worker code can ``await self.storage_service.mark_*`` against the fake.
+"""
 
 from typing import Any, Dict, Optional, Union
+
 from pydantic import BaseModel
 
 
 class FakeStorageService:
     """In-memory document store for testing.
 
-    Mirrors the real StorageService interface (mark_processing, mark_completed,
-    mark_failed). Tests assert on self.documents after running the worker.
+    Methods that the worker awaits are async; helpers used only inside the
+    test (``seed``, ``_ensure_exists``) stay synchronous.
     """
 
     def __init__(self):
@@ -23,13 +28,13 @@ class FakeStorageService:
             "error_message": None,
         }
 
-    def get_status(self, document_id: str) -> Optional[str]:
+    async def get_status(self, document_id: str) -> Optional[str]:
         row = self.documents.get(document_id)
         if row is None:
             return None
         return row.get("status")
 
-    def update_document(
+    async def update_document(
         self,
         document_id: str,
         status: Optional[str] = None,
@@ -50,11 +55,11 @@ class FakeStorageService:
         if error_message is not None:
             self.documents[document_id]["error_message"] = error_message
 
-    def mark_processing(self, document_id: str) -> None:
+    async def mark_processing(self, document_id: str) -> None:
         self._ensure_exists(document_id)
         self.documents[document_id]["status"] = "processing"
 
-    def mark_completed(
+    async def mark_completed(
         self,
         document_id: str,
         analysis_results: Union[Dict[str, Any], BaseModel],
@@ -68,7 +73,7 @@ class FakeStorageService:
         self.documents[document_id]["llm_usage"] = llm_usage
         self.documents[document_id]["status"] = "completed"
 
-    def mark_failed(self, document_id: str, error_message: str) -> None:
+    async def mark_failed(self, document_id: str, error_message: str) -> None:
         self._ensure_exists(document_id)
         self.documents[document_id]["status"] = "failed"
         self.documents[document_id]["error_message"] = error_message

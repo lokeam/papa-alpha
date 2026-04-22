@@ -17,12 +17,13 @@ Envelope shape (written by ``RFPWorker._push_to_dlq``):
 from __future__ import annotations
 
 import argparse
+import asyncio
 import json
 import sys
 from typing import Any, Dict, List, Optional, Tuple
 
 import redis as sync_redis
-from supabase import create_client
+from supabase import create_async_client
 
 from config import (
     DLQ_NAME,
@@ -43,9 +44,16 @@ def _redis_client() -> sync_redis.Redis:
 
 
 def _storage_service() -> StorageService:
-    client = create_client(
-        SUPABASE_URL.rstrip("/") + "/",
-        SUPABASE_SERVICE_ROLE_KEY,
+    """Build a StorageService backed by an AsyncClient.
+
+    The CLI runs synchronously and bridges into the async StorageService via
+    ``asyncio.run`` at each call site.
+    """
+    client = asyncio.run(
+        create_async_client(
+            SUPABASE_URL.rstrip("/") + "/",
+            SUPABASE_SERVICE_ROLE_KEY,
+        )
     )
     return StorageService(client)
 
@@ -126,7 +134,9 @@ def replay(document_id: str) -> int:
         return 1
 
     storage = _storage_service()
-    storage.update_document(document_id, status="pending", error_message="")
+    asyncio.run(
+        storage.update_document(document_id, status="pending", error_message="")
+    )
 
     payload["attempts"] = 0
     redis_client.lpush(QUEUE_NAME, json.dumps(payload))

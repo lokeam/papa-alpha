@@ -1,4 +1,9 @@
-"""Fake PDFService — minimal spy for testing."""
+"""Fake PDFService — minimal spy for testing.
+
+``download_pdf`` is async to match services.pdf_service.PDFService.
+``extract_text`` stays synchronous and is offloaded by the worker via
+``asyncio.to_thread`` at the call site.
+"""
 
 
 class FakePDFService:
@@ -12,7 +17,7 @@ class FakePDFService:
         self.download_calls: list[str] = []
         self.extract_calls: list[str] = []
 
-    def download_pdf(self, storage_path: str, workdir: str) -> str:
+    async def download_pdf(self, storage_path: str, workdir: str) -> str:
         self.download_calls.append(storage_path)
         return f"{workdir}/fake_rfp.pdf"
 

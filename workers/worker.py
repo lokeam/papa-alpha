@@ -11,7 +11,7 @@ from typing import Any, Dict, Optional
 import structlog
 from redis.asyncio import Redis
 from redis.exceptions import RedisError, ConnectionError as RedisConnectionError, TimeoutError as RedisTimeoutError
-from supabase import create_client, Client
+from supabase import AsyncClient, create_async_client
 
 from config import (
     REDIS_URL,
@@ -92,7 +92,7 @@ class RFPWorker:
         Services left as None are created by connect().
         """
         self.redis_client = redis_client
-        self.supabase_client: Optional[Client] = None
+        self.supabase_client: Optional[AsyncClient] = None
         self.queue_name = QUEUE_NAME
 
         self.storage_service = storage_service
@@ -106,7 +106,7 @@ class RFPWorker:
         # Shutdown coordination — set by signal handler
         self._shutdown = asyncio.Event()
 
-    def connect(self):
+    async def connect(self):
         """Connect to Redis and Supabase, filling in any services not injected."""
         if self.redis_client is None:
             self.redis_client = Redis.from_url(REDIS_URL, decode_responses=True)
@@ -114,7 +114,7 @@ class RFPWorker:
 
         needs_supabase = self.storage_service is None or self.pdf_service is None
         if needs_supabase and self.supabase_client is None:
-            self.supabase_client = create_client(
+            self.supabase_client = await create_async_client(
                 SUPABASE_URL.rstrip('/') + '/',
                 SUPABASE_SERVICE_ROLE_KEY,
             )
@@ -218,9 +218,7 @@ class RFPWorker:
         Storage failures during the lookup are surfaced — they're retryable.
         """
         document_id = job_data['documentId']
-        current_status = await asyncio.to_thread(
-            self.storage_service.get_status, document_id
-        )
+        current_status = await self.storage_service.get_status(document_id)
 
         if current_status == "completed":
             logger.info(
@@ -260,15 +258,19 @@ class RFPWorker:
 
         try:
             with tempfile.TemporaryDirectory(prefix="rfp_") as workdir:
-                self.storage_service.mark_processing(document_id)
+                await self.storage_service.mark_processing(document_id)
                 await progress.publish("uploaded")
 
                 logger.info(f"Downloading PDF from {storage_path}")
-                pdf_path = self.pdf_service.download_pdf(storage_path, workdir=workdir)
+                pdf_path = await self.pdf_service.download_pdf(storage_path, workdir=workdir)
 
                 logger.info("Extracting text from PDF")
                 await progress.publish("extracting_text")
-                extracted_text = self.pdf_service.extract_text(pdf_path)
+                # pdfplumber is sync + CPU-bound — keep it off the event loop
+                # so /healthz and other async tasks stay responsive.
+                extracted_text = await asyncio.to_thread(
+                    self.pdf_service.extract_text, pdf_path
+                )
                 logger.info(f"Extracted {len(extracted_text)} characters")
 
                 logger.info("Starting LLM analysis (4 categories)...")
@@ -306,7 +308,7 @@ class RFPWorker:
                     f"{analysis_results.get_success_rate():.0f}% success"
                 )
 
-                self.storage_service.mark_completed(
+                await self.storage_service.mark_completed(
                     document_id=document_id,
                     analysis_results=analysis_results,
                     llm_usage=llm_usage,
@@ -364,7 +366,7 @@ class RFPWorker:
             pass  # Best-effort
 
         try:
-            self.storage_service.mark_failed(document_id, error_msg)
+            await self.storage_service.mark_failed(document_id, error_msg)
         except Exception as db_error:
             # mark_failed must succeed before we push DLQ — a DLQ entry
             # without a failed DB row is the worst outcome (PRD invariant).

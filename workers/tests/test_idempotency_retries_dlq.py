@@ -167,7 +167,7 @@ async def test_dlq_push_skipped_if_mark_failed_raises(
     doc_id = "mark-failed-fails"
     storage_service.seed(doc_id)
 
-    def exploding_mark_failed(*args, **kwargs):
+    async def exploding_mark_failed(*args, **kwargs):
         raise RuntimeError("Supabase down")
 
     storage_service.mark_failed = exploding_mark_failed
