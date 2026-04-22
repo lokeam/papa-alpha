@@ -19,6 +19,7 @@ from config import (
 )
 from health import HealthServer
 from logging_config import configure_logging
+from tracing import configure_tracing, shutdown_tracing
 from worker import RFPWorker
 
 logger = logging.getLogger(__name__)
@@ -81,6 +82,9 @@ async def _run_worker():
 if __name__ == "__main__":
     configure_logging()
     validate_config()
+    # Tracing must be installed before the OpenAI client is constructed
+    # downstream, otherwise auto-instrumentation misses the first calls.
+    configure_tracing()
     try:
         asyncio.run(_run_worker())
     except KeyboardInterrupt:
@@ -88,3 +92,5 @@ if __name__ == "__main__":
     except Exception as e:
         logger.error(f"Worker failed with this error: {e}")
         sys.exit(1)
+    finally:
+        shutdown_tracing()

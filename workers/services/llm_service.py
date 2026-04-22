@@ -62,9 +62,11 @@ from prompts import (
     build_questions_prompt,
     build_subcontracting_prompt,
 )
+from tracing import get_tracer
 from utils.section_extractor import SectionExtractor
 
 logger = logging.getLogger(__name__)
+tracer = get_tracer("llm_service")
 
 
 class LLMService:
@@ -183,24 +185,25 @@ class LLMService:
         section_text = self.extractor.extract_for_risks(full_text)
         user_prompt = build_risks_prompt(section_text, metadata)
 
-        try:
-            response = await self._call_llm_with_retry(
-                system_prompt=RISKS_SYSTEM_PROMPT,
-                user_prompt=user_prompt,
-                category="risks"
-            )
+        with tracer.start_as_current_span("llm.category.risks"):
+            try:
+                response = await self._call_llm_with_retry(
+                    system_prompt=RISKS_SYSTEM_PROMPT,
+                    user_prompt=user_prompt,
+                    category="risks"
+                )
 
-            result_json = json.loads(response['content'])
-            validated = RisksAnalysis(**result_json)
+                result_json = json.loads(response['content'])
+                validated = RisksAnalysis(**result_json)
 
-            self.category_costs.risks = TokenUsage(**response['usage'])
+                self.category_costs.risks = TokenUsage(**response['usage'])
 
-            logger.info(f"Risks analysis complete: {validated.analysis_summary.total_risks_found} risks found")
-            return validated
+                logger.info(f"Risks analysis complete: {validated.analysis_summary.total_risks_found} risks found")
+                return validated
 
-        except Exception as e:
-            e._analysis_category = "risks"
-            raise
+            except Exception as e:
+                e._analysis_category = "risks"
+                raise
 
     async def _analyze_accessibility(
         self,
@@ -213,28 +216,29 @@ class LLMService:
         section_text = self.extractor.extract_for_accessibility(full_text)
         user_prompt = build_accessibility_prompt(section_text, metadata)
 
-        try:
-            response = await self._call_llm_with_retry(
-                system_prompt=ACCESSIBILITY_SYSTEM_PROMPT,
-                user_prompt=user_prompt,
-                category="accessibility"
-            )
+        with tracer.start_as_current_span("llm.category.accessibility"):
+            try:
+                response = await self._call_llm_with_retry(
+                    system_prompt=ACCESSIBILITY_SYSTEM_PROMPT,
+                    user_prompt=user_prompt,
+                    category="accessibility"
+                )
 
-            result_json = json.loads(response['content'])
-            validated = AccessibilityAnalysis(**result_json)
+                result_json = json.loads(response['content'])
+                validated = AccessibilityAnalysis(**result_json)
 
-            self.category_costs.accessibility = TokenUsage(**response['usage'])
+                self.category_costs.accessibility = TokenUsage(**response['usage'])
 
-            logger.info(
-                f"Accessibility analysis complete: "
-                f"score {validated.accessibility_analysis.final_score}/10, "
-                f"{validated.accessibility_analysis.barriers_found} barriers"
-            )
-            return validated
+                logger.info(
+                    f"Accessibility analysis complete: "
+                    f"score {validated.accessibility_analysis.final_score}/10, "
+                    f"{validated.accessibility_analysis.barriers_found} barriers"
+                )
+                return validated
 
-        except Exception as e:
-            e._analysis_category = "accessibility"
-            raise
+            except Exception as e:
+                e._analysis_category = "accessibility"
+                raise
 
     async def _analyze_questions(
         self,
@@ -248,23 +252,24 @@ class LLMService:
         section_text = self.extractor.extract_for_risks(full_text)
         user_prompt = build_questions_prompt(section_text, metadata, risks_context)
 
-        response = await self._call_llm_with_retry(
-            system_prompt=QUESTIONS_SYSTEM_PROMPT,
-            user_prompt=user_prompt,
-            category="questions"
-        )
+        with tracer.start_as_current_span("llm.category.questions"):
+            response = await self._call_llm_with_retry(
+                system_prompt=QUESTIONS_SYSTEM_PROMPT,
+                user_prompt=user_prompt,
+                category="questions"
+            )
 
-        result_json = json.loads(response['content'])
-        validated = QuestionsAnalysis(**result_json)
+            result_json = json.loads(response['content'])
+            validated = QuestionsAnalysis(**result_json)
 
-        self.category_costs.questions = TokenUsage(**response['usage'])
+            self.category_costs.questions = TokenUsage(**response['usage'])
 
-        logger.info(
-            f"Questions analysis complete: "
-            f"{validated.questions_predicted} questions, "
-            f"{validated.urgency_breakdown.high} high urgency"
-        )
-        return validated
+            logger.info(
+                f"Questions analysis complete: "
+                f"{validated.questions_predicted} questions, "
+                f"{validated.urgency_breakdown.high} high urgency"
+            )
+            return validated
 
     async def _analyze_subcontracting(
         self,
@@ -277,27 +282,28 @@ class LLMService:
         section_text = self.extractor.extract_for_subcontracting(full_text)
         user_prompt = build_subcontracting_prompt(section_text, metadata)
 
-        try:
-            response = await self._call_llm_with_retry(
-                system_prompt=SUBCONTRACTING_SYSTEM_PROMPT,
-                user_prompt=user_prompt,
-                category="subcontracting"
-            )
+        with tracer.start_as_current_span("llm.category.subcontracting"):
+            try:
+                response = await self._call_llm_with_retry(
+                    system_prompt=SUBCONTRACTING_SYSTEM_PROMPT,
+                    user_prompt=user_prompt,
+                    category="subcontracting"
+                )
 
-            result_json = json.loads(response['content'])
-            validated = SubcontractingAnalysis(**result_json)
+                result_json = json.loads(response['content'])
+                validated = SubcontractingAnalysis(**result_json)
 
-            self.category_costs.subcontracting = TokenUsage(**response['usage'])
+                self.category_costs.subcontracting = TokenUsage(**response['usage'])
 
-            logger.info(
-                f"Subcontracting analysis complete: "
-                f"{validated.subcontracting_analysis.opportunities_found} opportunities"
-            )
-            return validated
+                logger.info(
+                    f"Subcontracting analysis complete: "
+                    f"{validated.subcontracting_analysis.opportunities_found} opportunities"
+                )
+                return validated
 
-        except Exception as e:
-            e._analysis_category = "subcontracting"
-            raise
+            except Exception as e:
+                e._analysis_category = "subcontracting"
+                raise
 
     async def _call_llm_with_retry(
         self,

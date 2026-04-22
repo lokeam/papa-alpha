@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
 import structlog
+from opentelemetry.trace import SpanKind, Status, StatusCode
 from redis.asyncio import Redis
 from redis.exceptions import RedisError, ConnectionError as RedisConnectionError, TimeoutError as RedisTimeoutError
 from supabase import AsyncClient, create_async_client
@@ -29,7 +30,10 @@ from config import (
 )
 from exceptions import LLMServiceError, StorageError
 from services import PDFService, StorageService, LLMService
+from tracing import get_tracer
 from utils import ProgressPublisher
+
+tracer = get_tracer("worker")
 
 # Errors that mean "transient — try again before giving up". Anything not in
 # this set goes straight to the DLQ with attempts=1 (no retry budget burned).
@@ -193,18 +197,38 @@ class RFPWorker:
         job_data['attempts'] = attempts
 
         structlog.contextvars.bind_contextvars(document_id=document_id, attempts=attempts)
-        try:
-            logger.info(f"Processing job for document {document_id}: {filename}")
+        # The root span covers the full job — including the failure path —
+        # so retries surface as repeated child trees in Phoenix and the
+        # document_id/attempts/worker_id attributes are visible at the top
+        # of every trace.
+        with tracer.start_as_current_span(
+            "worker.process_job",
+            kind=SpanKind.CONSUMER,
+            attributes={
+                "document_id": str(document_id) if document_id is not None else "",
+                "filename": filename or "",
+                "attempts": attempts,
+                "worker_id": self.worker_id,
+            },
+        ) as span:
+            try:
+                logger.info(f"Processing job for document {document_id}: {filename}")
 
-            # Idempotency: a replayed job for a terminal document is a no-op.
-            # `failed` only appears here when a previous attempt's ack didn't
-            # land — log loudly so the divergence is visible, but don't re-run.
-            if not await self._handle_terminal_status(job_data):
-                return
+                # Idempotency: a replayed job for a terminal document is a no-op.
+                # `failed` only appears here when a previous attempt's ack didn't
+                # land — log loudly so the divergence is visible, but don't re-run.
+                if not await self._handle_terminal_status(job_data):
+                    span.set_attribute("job.outcome", "skipped_terminal")
+                    return
 
-            await self._run_job_steps(job_data)
-        finally:
-            structlog.contextvars.unbind_contextvars("document_id", "attempts")
+                await self._run_job_steps(job_data)
+                span.set_attribute("job.outcome", "completed")
+            except Exception as exc:
+                span.record_exception(exc)
+                span.set_status(Status(StatusCode.ERROR, str(exc)))
+                raise
+            finally:
+                structlog.contextvars.unbind_contextvars("document_id", "attempts")
 
     # ------------------------------------------------------------------
     # Status / idempotency
@@ -262,23 +286,41 @@ class RFPWorker:
                 await progress.publish("uploaded")
 
                 logger.info(f"Downloading PDF from {storage_path}")
-                pdf_path = await self.pdf_service.download_pdf(storage_path, workdir=workdir)
+                with tracer.start_as_current_span(
+                    "pdf.download",
+                    attributes={"storage_path": storage_path},
+                ):
+                    pdf_path = await self.pdf_service.download_pdf(
+                        storage_path, workdir=workdir
+                    )
 
                 logger.info("Extracting text from PDF")
                 await progress.publish("extracting_text")
                 # pdfplumber is sync + CPU-bound — keep it off the event loop
                 # so /healthz and other async tasks stay responsive.
-                extracted_text = await asyncio.to_thread(
-                    self.pdf_service.extract_text, pdf_path
-                )
+                with tracer.start_as_current_span("pdf.extract") as extract_span:
+                    extracted_text = await asyncio.to_thread(
+                        self.pdf_service.extract_text, pdf_path
+                    )
+                    extract_span.set_attribute("text.length", len(extracted_text))
                 logger.info(f"Extracted {len(extracted_text)} characters")
 
                 logger.info("Starting LLM analysis (4 categories)...")
-                analysis_results = await self.llm_service.analyze_rfp(
-                    document_id=document_id,
-                    full_text=extracted_text,
-                    progress_publisher=progress,
-                )
+                with tracer.start_as_current_span(
+                    "llm.analyze_rfp",
+                    attributes={"document_id": document_id},
+                ) as llm_span:
+                    analysis_results = await self.llm_service.analyze_rfp(
+                        document_id=document_id,
+                        full_text=extracted_text,
+                        progress_publisher=progress,
+                    )
+                    llm_span.set_attribute(
+                        "llm.total_tokens", int(analysis_results.total_tokens)
+                    )
+                    llm_span.set_attribute(
+                        "llm.total_cost_usd", float(analysis_results.total_cost_usd)
+                    )
 
                 input_tokens = 0
                 output_tokens = 0
@@ -308,11 +350,12 @@ class RFPWorker:
                     f"{analysis_results.get_success_rate():.0f}% success"
                 )
 
-                await self.storage_service.mark_completed(
-                    document_id=document_id,
-                    analysis_results=analysis_results,
-                    llm_usage=llm_usage,
-                )
+                with tracer.start_as_current_span("supabase.mark_completed"):
+                    await self.storage_service.mark_completed(
+                        document_id=document_id,
+                        analysis_results=analysis_results,
+                        llm_usage=llm_usage,
+                    )
 
                 await progress.publish("completed")
                 logger.info(f"Job {document_id} completed successfully")
@@ -366,7 +409,8 @@ class RFPWorker:
             pass  # Best-effort
 
         try:
-            await self.storage_service.mark_failed(document_id, error_msg)
+            with tracer.start_as_current_span("supabase.mark_failed"):
+                await self.storage_service.mark_failed(document_id, error_msg)
         except Exception as db_error:
             # mark_failed must succeed before we push DLQ — a DLQ entry
             # without a failed DB row is the worst outcome (PRD invariant).

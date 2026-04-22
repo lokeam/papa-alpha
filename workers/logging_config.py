@@ -19,8 +19,34 @@ from __future__ import annotations
 import logging
 import os
 import sys
+from typing import Any, MutableMapping
 
 import structlog
+from opentelemetry import trace as _otel_trace
+
+
+def _add_otel_trace_context(
+    _logger: Any,
+    _method_name: str,
+    event_dict: MutableMapping[str, Any],
+) -> MutableMapping[str, Any]:
+    """structlog processor: stamp ``trace_id`` and ``span_id`` on every log line.
+
+    When a span is active (set by ``tracer.start_as_current_span``), its
+    16-byte trace id and 8-byte span id are written as zero-padded hex so
+    Phoenix can join logs to traces. With no active span the OTEL API
+    returns ``INVALID_SPAN`` (all-zero context) — in that case the keys
+    are omitted entirely so noisy boot/idle lines don't grow false fields.
+    """
+    span = _otel_trace.get_current_span()
+    if span is None:
+        return event_dict
+    ctx = span.get_span_context()
+    if not ctx.is_valid:
+        return event_dict
+    event_dict["trace_id"] = format(ctx.trace_id, "032x")
+    event_dict["span_id"] = format(ctx.span_id, "016x")
+    return event_dict
 
 
 def configure_logging(level: str | None = None) -> None:
@@ -38,6 +64,7 @@ def configure_logging(level: str | None = None) -> None:
         structlog.contextvars.merge_contextvars,
         structlog.stdlib.add_logger_name,
         structlog.stdlib.add_log_level,
+        _add_otel_trace_context,
         structlog.processors.TimeStamper(fmt="iso", utc=True, key="timestamp"),
         structlog.processors.StackInfoRenderer(),
         structlog.processors.format_exc_info,
