@@ -24,7 +24,7 @@
 #
 # ---------------------------------------------------------------------------
 
-.PHONY: help setup start stop restart logs health clean reset supabase-start supabase-stop supabase-reset types-generate frontend-dev worker-logs redis-logs redis-subscribe dev-logs test-progress worker-build worker-start worker-stop worker-restart worker-shell check-ports test dlq-list dlq-replay dlq-purge
+.PHONY: help setup start stop restart logs health clean reset supabase-start supabase-stop supabase-reset types-generate frontend-dev worker-logs redis-logs redis-subscribe dev-logs test-progress worker-build worker-start worker-stop worker-restart worker-shell check-ports test dlq-list dlq-replay dlq-purge evals
 # Colors
 BLUE := \033[34m
 GREEN := \033[32m
@@ -81,6 +81,9 @@ help:
 	@echo "  make dlq-list                   - List failed jobs in the DLQ"
 	@echo "  make dlq-replay ID=<doc_id>     - Reset doc to pending and re-enqueue"
 	@echo "  make dlq-purge  ID=<doc_id>     - Drop DLQ entry without re-enqueuing"
+	@echo ""
+	@echo "$(GREEN)Quality Evals:$(RESET)"
+	@echo "  make evals                      - Run offline eval suite (schema, completeness, groundedness)"
 	@echo ""
 	@echo "$(GREEN)Cleanup:$(RESET)"
 	@echo "  make clean              - Remove containers (preserves data)"
@@ -325,6 +328,16 @@ dlq-replay:
 dlq-purge:
 	@if [ -z "$(ID)" ]; then echo "$(RED)Usage: make dlq-purge ID=<document_id>$(RESET)"; exit 2; fi
 	@cd workers && .venv/bin/python -m dlq purge $(ID)
+
+# ---------------------------------------------------------------------------
+# Quality Evals
+# ---------------------------------------------------------------------------
+# Runs the offline eval suite over fixtures in workers/evals/fixtures/.
+# Exits non-zero if any category drops more than EVAL_REGRESSION_THRESHOLD
+# (default 0.05) below the per-category baseline in workers/evals/baselines.json.
+# Set PHOENIX_OTLP_ENDPOINT to also export eval traces to Phoenix.
+evals:
+	@cd workers && .venv/bin/python -m evals.runner $(if $(PHOENIX_OTLP_ENDPOINT),--phoenix-endpoint $(PHOENIX_OTLP_ENDPOINT),--no-phoenix)
 
 # ---------------------------------------------------------------------------
 # Cleanup Commands
