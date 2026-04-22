@@ -24,7 +24,7 @@
 #
 # ---------------------------------------------------------------------------
 
-.PHONY: help setup start stop restart logs health clean reset supabase-start supabase-stop supabase-reset types-generate frontend-dev worker-logs redis-logs redis-subscribe dev-logs test-progress worker-build worker-start worker-stop worker-restart worker-shell check-ports test
+.PHONY: help setup start stop restart logs health clean reset supabase-start supabase-stop supabase-reset types-generate frontend-dev worker-logs redis-logs redis-subscribe dev-logs test-progress worker-build worker-start worker-stop worker-restart worker-shell check-ports test dlq-list dlq-replay dlq-purge
 # Colors
 BLUE := \033[34m
 GREEN := \033[32m
@@ -76,6 +76,11 @@ help:
 	@echo "  make redis-subscribe    - Watch real-time progress updates"
 	@echo "  make dev-logs           - Watch worker logs + progress together"
 	@echo "  make test-progress      - Validate progress message format"
+	@echo ""
+	@echo "$(GREEN)Dead-Letter Queue:$(RESET)"
+	@echo "  make dlq-list                   - List failed jobs in the DLQ"
+	@echo "  make dlq-replay ID=<doc_id>     - Reset doc to pending and re-enqueue"
+	@echo "  make dlq-purge  ID=<doc_id>     - Drop DLQ entry without re-enqueuing"
 	@echo ""
 	@echo "$(GREEN)Cleanup:$(RESET)"
 	@echo "  make clean              - Remove containers (preserves data)"
@@ -302,6 +307,24 @@ test:
 	@echo "$(BLUE)Running worker tests...$(RESET)"
 	@cd workers && .venv/bin/python -m pytest tests/ -v
 	@echo "$(GREEN)All tests passed$(RESET)"
+
+# ---------------------------------------------------------------------------
+# Dead-Letter Queue Operations
+# ---------------------------------------------------------------------------
+# Usage:
+#   make dlq-list
+#   make dlq-replay ID=<document_id>
+#   make dlq-purge  ID=<document_id>
+dlq-list:
+	@cd workers && .venv/bin/python -m dlq list
+
+dlq-replay:
+	@if [ -z "$(ID)" ]; then echo "$(RED)Usage: make dlq-replay ID=<document_id>$(RESET)"; exit 2; fi
+	@cd workers && .venv/bin/python -m dlq replay $(ID)
+
+dlq-purge:
+	@if [ -z "$(ID)" ]; then echo "$(RED)Usage: make dlq-purge ID=<document_id>$(RESET)"; exit 2; fi
+	@cd workers && .venv/bin/python -m dlq purge $(ID)
 
 # ---------------------------------------------------------------------------
 # Cleanup Commands

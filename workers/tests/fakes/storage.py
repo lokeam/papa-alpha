@@ -29,6 +29,27 @@ class FakeStorageService:
             return None
         return row.get("status")
 
+    def update_document(
+        self,
+        document_id: str,
+        status: Optional[str] = None,
+        analysis_results: Optional[Any] = None,
+        llm_usage: Optional[Dict[str, Any]] = None,
+        error_message: Optional[str] = None,
+    ) -> None:
+        self._ensure_exists(document_id)
+        if status is not None:
+            self.documents[document_id]["status"] = status
+        if analysis_results is not None:
+            if isinstance(analysis_results, BaseModel):
+                self.documents[document_id]["analysis_results"] = analysis_results.model_dump(mode="json")
+            else:
+                self.documents[document_id]["analysis_results"] = analysis_results
+        if llm_usage is not None:
+            self.documents[document_id]["llm_usage"] = llm_usage
+        if error_message is not None:
+            self.documents[document_id]["error_message"] = error_message
+
     def mark_processing(self, document_id: str) -> None:
         self._ensure_exists(document_id)
         self.documents[document_id]["status"] = "processing"
