@@ -1,0 +1,119 @@
+{
+  "rfp_text": "REQUEST FOR PROPOSAL — Citywide Network Refresh\n\nSection 1.4: Award will be made on March 1, with project kickoff required on February 15. Section 5.2: Bidders must demonstrate annual revenue of at least $50,000,000 in each of the past three years. Section 9.3: Network cabling installation may be subcontracted to certified low-voltage installers.\n",
+  "expected_analysis": {
+    "risks": {
+      "section_analyzed": {"name": "Schedule", "page_range": "1-2"},
+      "analysis_summary": {
+        "total_risks_found": 1,
+        "high_severity": 1,
+        "medium_severity": 0,
+        "low_severity": 0,
+        "overall_risk_level": "HIGH"
+      },
+      "risks": [
+        {
+          "id": "RISK-001",
+          "type": "Timeline Conflict",
+          "severity": "HIGH",
+          "location": {"section": "1.4", "page": "1"},
+          "exact_quote": "Award will be made on March 1, with project kickoff required on February 15",
+          "issue_description": "Project kickoff date precedes the award date by two weeks",
+          "reasoning": "Kickoff is scheduled before contract award is even made. No vendor can begin work without an executed contract, so the schedule as written is impossible to meet and reflects a drafting error.",
+          "impact_if_unresolved": "Vendors cannot reliably plan staffing and may price in schedule risk; risk of dispute at kickoff",
+          "suggested_fix": "Move kickoff to a date after award (e.g., March 8) or move award earlier",
+          "confidence": 95
+        }
+      ],
+      "self_critique": {"review_performed": true, "findings_validated": true}
+    },
+    "accessibility": {
+      "accessibility_analysis": {
+        "final_score": 2.5,
+        "rating": "Maximum Barriers",
+        "total_deductions": 7.5,
+        "barriers_found": 1
+      },
+      "barriers": [
+        {
+          "id": "ACCESS-001",
+          "type": "Revenue",
+          "severity": "HIGH",
+          "location": {"section": "5.2", "page": "5"},
+          "exact_quote": "Bidders must demonstrate annual revenue of at least $50,000,000",
+          "requirement_analysis": {
+            "what_is_required": "$50M+ annual revenue for each of the last three years",
+            "industry_standard": "$5M - $15M typical for similar regional network refresh contracts",
+            "comparison": "3-10x higher than industry standard",
+            "is_justified": false,
+            "justification_reasoning": "Revenue floor excludes virtually all small businesses without scope-based justification"
+          },
+          "impact": "Effectively a sole-source restriction in disguise",
+          "deduction": 4.0,
+          "suggestion": "Replace revenue floor with bonding capacity or equivalent risk metric scaled to contract value",
+          "confidence": 88
+        }
+      ],
+      "positive_factors": [],
+      "recommendations": [],
+      "self_critique": {"standards_applied_correctly": true, "deductions_calculated_accurately": true}
+    },
+    "questions": {
+      "section_analyzed": "Schedule",
+      "questions_predicted": 1,
+      "urgency_breakdown": {"high": 1, "medium": 0, "low": 0},
+      "timeline_impact": "HIGH",
+      "questions": [
+        {
+          "id": "Q-001",
+          "urgency": "HIGH",
+          "priority": 1,
+          "predicted_question": "Is the kickoff date a typo, and what is the actual expected start date relative to award?",
+          "triggered_by": {
+            "exact_quote": "Award will be made on March 1, with project kickoff required on February 15",
+            "location": "Section 1.4, Page 1"
+          },
+          "confusion_analysis": {
+            "why_confusing": "Kickoff precedes award, which is logically impossible — vendors cannot determine which date is wrong or what the corrected schedule should be.",
+            "possible_interpretations": [
+              "Award date is a typo and should be earlier",
+              "Kickoff date is a typo and should be later"
+            ],
+            "vendor_cannot_determine": "Whether to staff up immediately upon award or operate on the original kickoff date"
+          },
+          "urgency_justification": "Schedule clarity is foundational to staffing and pricing the proposal",
+          "impact_if_unresolved": "Vendors will price defensive risk margins or simply no-bid",
+          "recommendation": "FIX NOW",
+          "suggested_fix": "Issue an amendment correcting whichever date is in error",
+          "confidence": 95
+        }
+      ],
+      "self_critique": {"questions_are_realistic": true, "urgency_levels_justified": true}
+    },
+    "subcontracting": {
+      "subcontracting_analysis": {
+        "rfp_requirement": "encouraged",
+        "goals_specified": false,
+        "opportunities_found": 1,
+        "total_estimated_value": "$60,000 - $150,000"
+      },
+      "opportunities": [
+        {
+          "id": "SUB-001",
+          "area": "Low-Voltage Cabling",
+          "rfp_text": "Network cabling installation may be subcontracted to certified low-voltage installers",
+          "location": "Section 9.3, Page 9",
+          "estimated_percentage": "10-20%",
+          "estimated_value": "$60,000 - $150,000",
+          "characteristics": ["Cat6/fiber pulls", "Termination and labeling"],
+          "suitable_business_types": ["Small business", "WOSB"],
+          "naics_code": "238210",
+          "naics_description": "Electrical Contractors and Other Wiring Installation Contractors",
+          "reasoning": "Network cabling is a discrete trade scope routinely separated out from network engineering and is explicitly invited for subcontracting in this RFP.",
+          "confidence": 82
+        }
+      ],
+      "recommendations": [],
+      "self_critique": {"opportunities_are_realistic": true, "estimates_are_justified": true}
+    }
+  }
+}

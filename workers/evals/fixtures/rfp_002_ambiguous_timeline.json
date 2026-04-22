@@ -1,0 +1,119 @@
+{
+  "rfp_text": "REQUEST FOR PROPOSAL — Software Modernization\n\nSection 1.2: Vendors must deliver the system in a reasonable amount of time after award. Section 4.1: Proposers shall demonstrate at least 10 years of experience with similar enterprise systems. Section 5.4: A portion of janitorial and facilities support work may be subcontracted to qualified small businesses.\n",
+  "expected_analysis": {
+    "risks": {
+      "section_analyzed": {"name": "Schedule and Scope", "page_range": "1-7"},
+      "analysis_summary": {
+        "total_risks_found": 1,
+        "high_severity": 0,
+        "medium_severity": 1,
+        "low_severity": 0,
+        "overall_risk_level": "MEDIUM"
+      },
+      "risks": [
+        {
+          "id": "RISK-001",
+          "type": "Ambiguous Language",
+          "severity": "MEDIUM",
+          "location": {"section": "1.2", "page": "2"},
+          "exact_quote": "Vendors must deliver the system in a reasonable amount of time",
+          "issue_description": "Delivery timeline is not specified, leaving vendors guessing at acceptable durations",
+          "reasoning": "The phrase 'reasonable amount of time' is subjective and unmeasurable. Different vendors will propose wildly different schedules, making proposals impossible to compare on a common basis.",
+          "impact_if_unresolved": "Evaluation team cannot objectively compare delivery timelines across proposals",
+          "suggested_fix": "Replace with a specific deadline or schedule milestones",
+          "confidence": 88
+        }
+      ],
+      "self_critique": {"review_performed": true, "findings_validated": true}
+    },
+    "accessibility": {
+      "accessibility_analysis": {
+        "final_score": 5.5,
+        "rating": "Significant Barriers",
+        "total_deductions": 4.5,
+        "barriers_found": 1
+      },
+      "barriers": [
+        {
+          "id": "ACCESS-001",
+          "type": "Experience",
+          "severity": "HIGH",
+          "location": {"section": "4.1", "page": "4"},
+          "exact_quote": "Proposers shall demonstrate at least 10 years of experience",
+          "requirement_analysis": {
+            "what_is_required": "10 years of demonstrated experience with similar enterprise systems",
+            "industry_standard": "3-5 years for comparable scope",
+            "comparison": "2-3x higher than industry standard",
+            "is_justified": false,
+            "justification_reasoning": "Excessive experience requirement excludes capable smaller firms without clear technical justification"
+          },
+          "impact": "Effectively bars new entrants and small businesses from competing",
+          "deduction": 2.5,
+          "suggestion": "Reduce to 3-5 years and accept equivalent recent project experience",
+          "confidence": 82
+        }
+      ],
+      "positive_factors": [],
+      "recommendations": [],
+      "self_critique": {"standards_applied_correctly": true, "deductions_calculated_accurately": true}
+    },
+    "questions": {
+      "section_analyzed": "Schedule and Scope",
+      "questions_predicted": 1,
+      "urgency_breakdown": {"high": 1, "medium": 0, "low": 0},
+      "timeline_impact": "HIGH",
+      "questions": [
+        {
+          "id": "Q-001",
+          "urgency": "HIGH",
+          "priority": 1,
+          "predicted_question": "What is the required delivery timeline for the modernization work?",
+          "triggered_by": {
+            "exact_quote": "Vendors must deliver the system in a reasonable amount of time",
+            "location": "Section 1.2, Page 2"
+          },
+          "confusion_analysis": {
+            "why_confusing": "Without an explicit deadline or milestone schedule, vendors cannot estimate staffing levels, costs, or acceptable risk margins for the proposal.",
+            "possible_interpretations": [
+              "Delivery within 6 months of award",
+              "Delivery within 18-24 months of award"
+            ],
+            "vendor_cannot_determine": "Whether to bid an aggressive accelerated schedule or a slower phased rollout"
+          },
+          "urgency_justification": "Schedule shapes price; without a target, every bid will be priced against a different schedule",
+          "impact_if_unresolved": "Bid prices and proposed approaches will not be comparable",
+          "recommendation": "FIX NOW",
+          "suggested_fix": "Specify a target delivery date or required milestone schedule",
+          "confidence": 90
+        }
+      ],
+      "self_critique": {"questions_are_realistic": true, "urgency_levels_justified": true}
+    },
+    "subcontracting": {
+      "subcontracting_analysis": {
+        "rfp_requirement": "encouraged",
+        "goals_specified": false,
+        "opportunities_found": 1,
+        "total_estimated_value": "$25,000 - $75,000"
+      },
+      "opportunities": [
+        {
+          "id": "SUB-001",
+          "area": "Janitorial and Facilities Support",
+          "rfp_text": "A portion of janitorial and facilities support work may be subcontracted to qualified small businesses",
+          "location": "Section 5.4, Page 6",
+          "estimated_percentage": "5-15%",
+          "estimated_value": "$25,000 - $75,000",
+          "characteristics": ["Routine janitorial", "Facilities upkeep"],
+          "suitable_business_types": ["Small business", "8(a)"],
+          "naics_code": "561720",
+          "naics_description": "Janitorial Services",
+          "reasoning": "Janitorial and facilities work is a well-defined, easily separable scope traditionally suited to small business subcontractors and explicitly invited by the RFP.",
+          "confidence": 80
+        }
+      ],
+      "recommendations": [],
+      "self_critique": {"opportunities_are_realistic": true, "estimates_are_justified": true}
+    }
+  }
+}

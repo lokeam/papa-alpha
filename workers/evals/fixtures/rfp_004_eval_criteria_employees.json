@@ -1,0 +1,119 @@
+{
+  "rfp_text": "REQUEST FOR PROPOSAL — Logistics Services\n\nSection 3.1: Proposals will be evaluated on price, technical merit, and other factors. Section 4.5: Vendor must employ at least 200 full-time staff dedicated to this contract. Section 8.1: Translation and interpretation services may be subcontracted to qualified language-services providers.\n",
+  "expected_analysis": {
+    "risks": {
+      "section_analyzed": {"name": "Evaluation Criteria", "page_range": "3-4"},
+      "analysis_summary": {
+        "total_risks_found": 1,
+        "high_severity": 1,
+        "medium_severity": 0,
+        "low_severity": 0,
+        "overall_risk_level": "HIGH"
+      },
+      "risks": [
+        {
+          "id": "RISK-001",
+          "type": "Evaluation Criteria",
+          "severity": "HIGH",
+          "location": {"section": "3.1", "page": "3"},
+          "exact_quote": "Proposals will be evaluated on price, technical merit, and other factors",
+          "issue_description": "Evaluation factors and their relative weights are undefined",
+          "reasoning": "Vendors cannot tailor their proposals without knowing how the agency will weigh the factors. The phrase 'other factors' invites arbitrary scoring and is a common source of bid protests.",
+          "impact_if_unresolved": "Bid protests are likely; vendors will misallocate effort across price vs. technical content",
+          "suggested_fix": "Publish explicit factor weights and a complete factor list",
+          "confidence": 90
+        }
+      ],
+      "self_critique": {"review_performed": true, "findings_validated": true}
+    },
+    "accessibility": {
+      "accessibility_analysis": {
+        "final_score": 3.5,
+        "rating": "Significant Barriers",
+        "total_deductions": 6.5,
+        "barriers_found": 1
+      },
+      "barriers": [
+        {
+          "id": "ACCESS-001",
+          "type": "Employee Count",
+          "severity": "HIGH",
+          "location": {"section": "4.5", "page": "4"},
+          "exact_quote": "Vendor must employ at least 200 full-time staff dedicated to this contract",
+          "requirement_analysis": {
+            "what_is_required": "200+ FTEs dedicated solely to this contract",
+            "industry_standard": "20-50 FTEs typical for similar logistics contracts",
+            "comparison": "4-10x higher than industry norm",
+            "is_justified": false,
+            "justification_reasoning": "Headcount requirement excludes nearly all small and mid-sized logistics firms with no clear scope-based justification"
+          },
+          "impact": "Functionally restricts the bid pool to a handful of national firms",
+          "deduction": 3.5,
+          "suggestion": "Replace with capacity-based requirement (throughput, on-time delivery rate)",
+          "confidence": 85
+        }
+      ],
+      "positive_factors": [],
+      "recommendations": [],
+      "self_critique": {"standards_applied_correctly": true, "deductions_calculated_accurately": true}
+    },
+    "questions": {
+      "section_analyzed": "Evaluation Criteria",
+      "questions_predicted": 1,
+      "urgency_breakdown": {"high": 1, "medium": 0, "low": 0},
+      "timeline_impact": "HIGH",
+      "questions": [
+        {
+          "id": "Q-001",
+          "urgency": "HIGH",
+          "priority": 1,
+          "predicted_question": "What is the relative weight of each evaluation factor and what does 'other factors' include?",
+          "triggered_by": {
+            "exact_quote": "Proposals will be evaluated on price, technical merit, and other factors",
+            "location": "Section 3.1, Page 3"
+          },
+          "confusion_analysis": {
+            "why_confusing": "Without explicit weights, vendors cannot decide whether to optimize their proposal for low price, technical depth, or some unstated factor that may dominate scoring.",
+            "possible_interpretations": [
+              "Lowest price wins, technical merit is pass/fail",
+              "Best-value award where technical merit may outweigh price"
+            ],
+            "vendor_cannot_determine": "How to allocate effort and pricing strategy across the proposal sections"
+          },
+          "urgency_justification": "Evaluation weighting fundamentally changes proposal strategy",
+          "impact_if_unresolved": "Likely bid protests and inconsistent proposal quality",
+          "recommendation": "FIX NOW",
+          "suggested_fix": "Publish numeric weights for each factor and enumerate every 'other factor'",
+          "confidence": 92
+        }
+      ],
+      "self_critique": {"questions_are_realistic": true, "urgency_levels_justified": true}
+    },
+    "subcontracting": {
+      "subcontracting_analysis": {
+        "rfp_requirement": "encouraged",
+        "goals_specified": false,
+        "opportunities_found": 1,
+        "total_estimated_value": "$30,000 - $90,000"
+      },
+      "opportunities": [
+        {
+          "id": "SUB-001",
+          "area": "Translation and Interpretation",
+          "rfp_text": "Translation and interpretation services may be subcontracted to qualified language-services providers",
+          "location": "Section 8.1, Page 8",
+          "estimated_percentage": "5-15%",
+          "estimated_value": "$30,000 - $90,000",
+          "characteristics": ["Document translation", "On-call interpretation"],
+          "suitable_business_types": ["WOSB", "8(a) language services"],
+          "naics_code": "541930",
+          "naics_description": "Translation and Interpretation Services",
+          "reasoning": "Language services are a clearly bounded, specialty scope item that the RFP explicitly invites for subcontracting and aligns well with small certified providers.",
+          "confidence": 80
+        }
+      ],
+      "recommendations": [],
+      "self_critique": {"opportunities_are_realistic": true, "estimates_are_justified": true}
+    }
+  }
+}

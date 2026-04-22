@@ -1,0 +1,20 @@
+{
+  "schema_compliance": {
+    "risks": 1.0,
+    "accessibility": 1.0,
+    "questions": 1.0,
+    "subcontracting": 1.0
+  },
+  "completeness": {
+    "risks": 1.0,
+    "accessibility": 1.0,
+    "questions": 1.0,
+    "subcontracting": 1.0
+  },
+  "groundedness": {
+    "risks": 1.0,
+    "accessibility": 1.0,
+    "questions": 1.0,
+    "subcontracting": 1.0
+  }
+}
