@@ -21,6 +21,9 @@ services:
 
       # Environment
       - PYTHON_ENV=${PYTHON_ENV:-development}
+
+      # Tracing — Phoenix OTLP collector. Optional: unset disables export.
+      - PHOENIX_OTLP_ENDPOINT=${PHOENIX_OTLP_ENDPOINT:-http://phoenix:4317}
     volumes:
       # Mount worker code for hot reload (optional)
       - ./workers:/app
@@ -69,6 +72,17 @@ services:
       - REDIS_HOSTS=local:redis:6379
     depends_on:
       - redis
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  # Phoenix — LLM trace collector + UI. Optional: the worker boots without it.
+  phoenix:
+    image: arizephoenix/phoenix:latest
+    container_name: papa-alpha-phoenix
+    ports:
+      - "6006:6006"   # UI
+      - "4317:4317"   # OTLP gRPC
     networks:
       - app-network
     restart: unless-stopped
