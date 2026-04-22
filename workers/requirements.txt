@@ -19,6 +19,14 @@ aiohttp>=3.9.0,<4.0.0
 # Structured JSON logging
 structlog>=24.0.0,<26.0.0
 
+# OpenTelemetry tracing + Phoenix exporter (LLM observability).
+# Tracing degrades to no-op if PHOENIX_OTLP_ENDPOINT is unset, so the
+# worker boots without Phoenix running.
+opentelemetry-sdk>=1.30.0,<2.0.0
+opentelemetry-exporter-otlp-proto-grpc>=1.30.0,<2.0.0
+openinference-instrumentation-openai>=0.1.20,<1.0.0
+arize-phoenix-otel>=0.6.0,<1.0.0
+
 # PDF Processing
 pypdf2>=3.0.0,<4.0.0
 pdfplumber>=0.10.0,<0.11.0

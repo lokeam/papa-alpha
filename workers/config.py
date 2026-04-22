@@ -84,6 +84,19 @@ STORAGE_BUCKET = "documents"
 SUPABASE_TIMEOUT_SECONDS = int(os.getenv("SUPABASE_TIMEOUT_SECONDS", "30"))
 
 # ============================================================================
+# Tracing (OpenTelemetry → Phoenix)
+# ============================================================================
+
+# OTLP gRPC endpoint for the Phoenix collector. Optional — when unset (or
+# empty) tracing is configured as a no-op so the worker boots without
+# Phoenix running and individual jobs are unaffected.
+PHOENIX_OTLP_ENDPOINT = os.getenv("PHOENIX_OTLP_ENDPOINT") or None
+
+# Logical service name reported on every span. Lets Phoenix group traces
+# from multiple workers under a single project.
+TRACING_SERVICE_NAME = os.getenv("TRACING_SERVICE_NAME", "rfp-worker")
+
+# ============================================================================
 # Progress Tracking Config
 # ============================================================================
 
