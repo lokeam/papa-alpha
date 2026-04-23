@@ -40,7 +40,7 @@
 'use client';
 
 import Link from 'next/link';
-import { use } from 'react';
+import { Suspense, use } from 'react';
 import { notFound, useSearchParams } from 'next/navigation';
 
 // Components
@@ -84,8 +84,7 @@ const scopeDisplayNames: Record<ScopeType, string> = {
 };
 
 
-export default function ScopeDetailPage({ params }: ScopePageProps) {
-  const { scope } = use(params);
+function ScopeDetailContent({ scope }: { scope: string }) {
   const searchParams = useSearchParams();
   const documentId = searchParams.get('documentId');
 
@@ -148,5 +147,16 @@ export default function ScopeDetailPage({ params }: ScopePageProps) {
       </div>
       </div>
     </PageMain>
+  );
+}
+
+export default function ScopeDetailPage({ params }: ScopePageProps) {
+  const { scope } = use(params);
+  // useSearchParams() must live under a Suspense boundary so that static
+  // prerender can bail out cleanly (Next.js 15+ enforcement).
+  return (
+    <Suspense fallback={<LoadingState />}>
+      <ScopeDetailContent scope={scope} />
+    </Suspense>
   );
 }

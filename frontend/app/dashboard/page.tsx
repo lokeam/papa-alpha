@@ -1,5 +1,6 @@
 'use client';
 
+import { Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 
 // Layout
@@ -16,8 +17,20 @@ import { ScopeCard } from '@/app/dashboard/components/ScopeCard';
 // Hooks
 import { useDocumentAnalysis } from '@/app/lib/hooks/useDocumentAnalysis';
 
+function DashboardLoading() {
+  return (
+    <PageMain>
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Loading analysis...</p>
+        </div>
+      </div>
+    </PageMain>
+  );
+}
 
-export default function SolicitationsDashboard() {
+function DashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const documentId = searchParams.get('documentId');
@@ -37,16 +50,7 @@ export default function SolicitationsDashboard() {
 
   // Loading state
   if (isLoading) {
-    return (
-      <PageMain>
-        <div className="flex min-h-screen items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-gray-600 dark:text-gray-400">Loading analysis...</p>
-          </div>
-        </div>
-      </PageMain>
-    );
+    return <DashboardLoading />;
   }
 
   // Error state
@@ -147,5 +151,15 @@ export default function SolicitationsDashboard() {
         <DashboardFooter />
       </div>
     </PageMain>
+  );
+}
+
+export default function SolicitationsDashboard() {
+  // useSearchParams() must live under a Suspense boundary so that static
+  // prerender can bail out cleanly (Next.js 15+ enforcement).
+  return (
+    <Suspense fallback={<DashboardLoading />}>
+      <DashboardContent />
+    </Suspense>
   );
 }
