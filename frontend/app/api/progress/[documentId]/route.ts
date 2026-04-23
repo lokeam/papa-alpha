@@ -20,11 +20,14 @@ export const GET = withRequestContext(
     const encoder = new TextEncoder();
     let isClosed = false;
 
-    const cleanup = () => {
-      if (!isClosed) {
-        isClosed = true;
-        subscriber.quit();
-        redis.quit();
+    const cleanup = async (): Promise<void> => {
+      if (isClosed) return;
+      isClosed = true;
+      try {
+        await subscriber.quit();
+        await redis.quit();
+      } catch (err) {
+        log.error({ err }, 'sse cleanup failed');
       }
     };
 
@@ -42,7 +45,7 @@ export const GET = withRequestContext(
               if (parsed.step === 'completed' || parsed.step === 'error') {
                 setTimeout(() => {
                   if (!isClosed) {
-                    cleanup();
+                    void cleanup();
                     controller.close();
                   }
                 }, 100);
@@ -54,7 +57,7 @@ export const GET = withRequestContext(
         });
 
         request.signal.addEventListener('abort', () => {
-          cleanup();
+          void cleanup();
           try {
             controller.close();
           } catch (e) {
@@ -63,7 +66,7 @@ export const GET = withRequestContext(
         });
       },
       cancel() {
-        cleanup();
+        void cleanup();
       },
     });
 
