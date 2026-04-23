@@ -3,18 +3,13 @@
 import { SunIcon } from '@/components/ui/icons/SunIcon';
 import { MoonIcon } from '@/components/ui/icons/MoonIcon';
 import { useTheme } from 'next-themes';
-import { useEffect, useState } from 'react';
 
 export function ThemeToggle() {
-  const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
+  const { resolvedTheme, setTheme } = useTheme();
 
-  // Avoid hydration mismatch
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
+  // resolvedTheme is undefined until next-themes hydrates on the client.
+  // Render an inert placeholder so SSR and first client render agree.
+  if (!resolvedTheme) {
     return (
       <button
         className="relative flex items-center justify-center size-10 rounded-md hover:bg-accent transition-colors cursor-pointer"
@@ -25,7 +20,7 @@ export function ThemeToggle() {
     );
   }
 
-  const isDark = theme === 'dark';
+  const isDark = resolvedTheme === 'dark';
 
   return (
     <button

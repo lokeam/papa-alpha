@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { PencilIcon } from '@/components/ui/icons/PencilIcon';
@@ -9,14 +9,13 @@ import { FileUploadIcon } from '@/components/ui/icons/FileUploadIcon';
 
 export default function Home() {
   const router = useRouter();
-  const { theme } = useTheme();
+  const { resolvedTheme } = useTheme();
   const [selectedOption, setSelectedOption] = useState<'write' | 'copy' | 'generate'>('write');
   const [isHovered, setIsHovered] = useState(false);
-  const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  // resolvedTheme is undefined until next-themes hydrates; treat that as light
+  // so SSR and first client render produce identical markup.
+  const isDark = resolvedTheme === 'dark';
 
   const handleNext = () => {
     if (selectedOption === 'generate') {
@@ -47,8 +46,8 @@ export default function Home() {
               <div
                 className="w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm"
                 style={{
-                  backgroundColor: !mounted ? 'hsl(0, 99%, 90%)' : (theme === 'dark' ? 'hsl(0, 0%, 40%)' : 'hsl(0, 99%, 90%)'),
-                  color: !mounted ? 'hsl(0, 78%, 40%)' : (theme === 'dark' ? 'hsl(0, 0%, 80%)' : 'hsl(0, 78%, 40%)')
+                  backgroundColor: isDark ? 'hsl(0, 0%, 40%)' : 'hsl(0, 99%, 90%)',
+                  color: isDark ? 'hsl(0, 0%, 80%)' : 'hsl(0, 78%, 40%)'
                 }}
               >
                 1
@@ -56,7 +55,7 @@ export default function Home() {
             </div>
 
             {/* Connector */}
-            <div className="w-16 h-0.5" style={{ backgroundColor: !mounted ? 'hsl(0, 0%, 85%)' : (theme === 'dark' ? 'hsl(0, 78%, 30%)' : 'hsl(0, 0%, 85%)') }} />
+            <div className="w-16 h-0.5" style={{ backgroundColor: isDark ? 'hsl(0, 78%, 30%)' : 'hsl(0, 0%, 85%)' }} />
 
             {/* Step 2 - Active */}
             <div className="flex flex-col items-center">
@@ -70,7 +69,7 @@ export default function Home() {
 
             {/* Step 3 */}
             <div className="flex flex-col items-center">
-              <div className="w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm" style={{ backgroundColor: !mounted ? 'hsl(0, 0%, 85%)' : (theme === 'dark' ? 'hsl(0, 0%, 25%)' : 'hsl(0, 0%, 85%)'), color: !mounted ? 'hsl(0, 0%, 45%)' : (theme === 'dark' ? 'hsl(0, 0%, 60%)' : 'hsl(0, 0%, 45%)') }}>
+              <div className="w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm" style={{ backgroundColor: isDark ? 'hsl(0, 0%, 25%)' : 'hsl(0, 0%, 85%)', color: isDark ? 'hsl(0, 0%, 60%)' : 'hsl(0, 0%, 45%)' }}>
                 3
               </div>
             </div>
@@ -141,12 +140,12 @@ export default function Home() {
               style={{
                 borderColor: selectedOption === 'generate'
                   ? 'hsl(1, 78%, 29%)'
-                  : (!mounted ? 'hsl(0, 0%, 85%)' : (theme === 'dark' ? 'hsl(0, 0%, 25%)' : 'hsl(0, 0%, 85%)')),
+                  : (isDark ? 'hsl(0, 0%, 25%)' : 'hsl(0, 0%, 85%)'),
                 backgroundColor: selectedOption === 'generate'
-                  ? (!mounted ? 'hsl(0, 0%, 100%)' : (theme === 'dark' ? 'hsl(1, 78%, 10%)' : 'hsl(0, 0%, 100%)'))
-                  : (!mounted ? 'hsl(0, 0%, 100%)' : (theme === 'dark' ? 'hsl(0, 0%, 10%)' : 'hsl(0, 0%, 100%)')),
+                  ? (isDark ? 'hsl(1, 78%, 10%)' : 'hsl(0, 0%, 100%)')
+                  : (isDark ? 'hsl(0, 0%, 10%)' : 'hsl(0, 0%, 100%)'),
                 boxShadow: isHovered
-                  ? (!mounted ? '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)' : (theme === 'dark' ? '0 20px 25px -5px rgba(185, 28, 28, 0.4), 0 8px 10px -6px rgba(185, 28, 28, 0.3)' : '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)'))
+                  ? (isDark ? '0 20px 25px -5px rgba(185, 28, 28, 0.4), 0 8px 10px -6px rgba(185, 28, 28, 0.3)' : '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)')
                   : '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
                 transition: 'all 150ms cubic-bezier(0.4, 0, 0.2, 1)'
               }}
