@@ -1,82 +1,78 @@
 import { NextRequest } from 'next/server';
 import Redis from 'ioredis';
 import { REDIS_URL } from '@/app/lib/config';
+import { getLogger, withRequestContext } from '@/app/lib/logger';
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ documentId: string }> }
-) {
-  const { documentId } = await params;
+export const GET = withRequestContext(
+  { route: '/api/progress/[documentId]' },
+  async (
+    request: NextRequest,
+    { params }: { params: Promise<{ documentId: string }> }
+  ) => {
+    const { documentId } = await params;
+    const log = getLogger().child({ documentId });
 
-  // Create Redis clients
-  const redis = new Redis(REDIS_URL);
-  const subscriber = redis.duplicate();
+    const redis = new Redis(REDIS_URL);
+    const subscriber = redis.duplicate();
 
-  const channel = `progress:${documentId}`;
+    const channel = `progress:${documentId}`;
 
-  // Set up SSE stream
-  const encoder = new TextEncoder();
-  let isClosed = false;
+    const encoder = new TextEncoder();
+    let isClosed = false;
 
-  const cleanup = () => {
-    if (!isClosed) {
-      isClosed = true;
-      subscriber.quit();
-      redis.quit();
-    }
-  };
+    const cleanup = () => {
+      if (!isClosed) {
+        isClosed = true;
+        subscriber.quit();
+        redis.quit();
+      }
+    };
 
-  const stream = new ReadableStream({
-    async start(controller) {
-      // Subscribe to Redis channel
-      await subscriber.subscribe(channel);
+    const stream = new ReadableStream({
+      async start(controller) {
+        await subscriber.subscribe(channel);
 
-      // Handle incoming messages
-      subscriber.on('message', (ch, message) => {
-        if (ch === channel && !isClosed) {
-          // Send SSE message
-          const data = `data: ${message}\n\n`;
-          controller.enqueue(encoder.encode(data));
+        subscriber.on('message', (ch, message) => {
+          if (ch === channel && !isClosed) {
+            const data = `data: ${message}\n\n`;
+            controller.enqueue(encoder.encode(data));
 
-          // Check if job is complete or error
-          try {
-            const parsed = JSON.parse(message);
-            if (parsed.step === 'completed' || parsed.step === 'error') {
-              // Close stream after completion
-              setTimeout(() => {
-                if (!isClosed) {
-                  cleanup();
-                  controller.close();
-                }
-              }, 100);
+            try {
+              const parsed = JSON.parse(message);
+              if (parsed.step === 'completed' || parsed.step === 'error') {
+                setTimeout(() => {
+                  if (!isClosed) {
+                    cleanup();
+                    controller.close();
+                  }
+                }, 100);
+              }
+            } catch (e) {
+              log.error({ err: e }, 'failed to parse progress message');
             }
-          } catch (e) {
-            console.error('Failed to parse progress message:', e);
           }
-        }
-      });
+        });
 
-      // Handle client disconnect
-      request.signal.addEventListener('abort', () => {
+        request.signal.addEventListener('abort', () => {
+          cleanup();
+          try {
+            controller.close();
+          } catch (e) {
+            log.error({ err: e }, 'failed to close controller');
+          }
+        });
+      },
+      cancel() {
         cleanup();
-        try {
-          controller.close();
-        } catch (e) {
-          // Controller already closed, ignore
-          console.error('Failed to close controller:', e);
-        }
-      });
-    },
-    cancel() {
-      cleanup();
-    },
-  });
+      },
+    });
 
-  return new Response(stream, {
-    headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive',
-    },
-  });
-}
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+      },
+    });
+  },
+);

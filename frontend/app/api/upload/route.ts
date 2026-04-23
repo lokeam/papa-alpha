@@ -1,29 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { DocumentService } from '@/app/lib/services/document-service';
 import { handleApiError } from '@/app/lib/utils/error-handler';
+import { getLogger, withRequestContext } from '@/app/lib/logger';
 
-export async function POST(request: NextRequest) {
-  try {
-    // Parse request
-    const formData = await request.formData();
-    const file = formData.get('file') as File;
+export const POST = withRequestContext(
+  { route: '/api/upload' },
+  async (request: NextRequest) => {
+    try {
+      const formData = await request.formData();
+      const file = formData.get('file') as File;
 
-    // Validate input
-    if (!file) {
-      return NextResponse.json(
-        { error: 'No file provided' },
-        { status: 400 }
-      );
+      if (!file) {
+        return NextResponse.json(
+          { error: 'No file provided' },
+          { status: 400 }
+        );
+      }
+
+      const documentService = new DocumentService();
+      const result = await documentService.uploadAndQueue(file);
+
+      return NextResponse.json(result);
+    } catch (error) {
+      getLogger().error({ err: error }, 'upload failed');
+      return handleApiError(error);
     }
-
-    // Call all business logic
-    const documentService = new DocumentService();
-    const result = await documentService.uploadAndQueue(file);
-
-    // Return response payload
-    return NextResponse.json(result);
-
-  } catch (error) {
-    return handleApiError(error);
-  }
-}
+  },
+);
