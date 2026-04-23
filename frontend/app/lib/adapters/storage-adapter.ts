@@ -25,6 +25,9 @@ export class StorageAdapter {
 
   async upload(path: string, file: File): Promise<void> {
     try {
+      if (path.includes('..')) {
+        throw new StorageError('Invalid path');
+      }
       assertSafePath(path);
       const buffer = await file.arrayBuffer();
       const { error } = await this.client.storage
@@ -47,6 +50,9 @@ export class StorageAdapter {
 
   async delete(path: string): Promise<void> {
     try {
+      if (path.includes('..')) {
+        throw new StorageError('Invalid path');
+      }
       assertSafePath(path);
       const { error } = await this.client.storage
         .from(DOCUMENTS_TABLE)
@@ -63,6 +69,9 @@ export class StorageAdapter {
   }
 
   async getPublicUrl(path: string): Promise<string> {
+    if (path.includes('..')) {
+      throw new StorageError('Invalid path');
+    }
     assertSafePath(path);
     const { data } = this.client.storage
       .from(DOCUMENTS_TABLE)
