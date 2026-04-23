@@ -29,6 +29,8 @@ services:
       - ./workers:/app
       # Shared uploads directory
       - ./uploads:/app/uploads
+    mem_limit: 2g
+    cpus: 2
     stop_grace_period: 660s
     depends_on:
       redis:
