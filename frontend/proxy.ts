@@ -21,7 +21,7 @@ function parseAllowedOrigins(raw: string | undefined): Set<string> {
   );
 }
 
-export function middleware(request: NextRequest): NextResponse {
+export function proxy(request: NextRequest): NextResponse {
   if (!STATE_CHANGING_METHODS.has(request.method)) {
     return NextResponse.next();
   }

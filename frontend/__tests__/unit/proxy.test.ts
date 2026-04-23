@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { NextRequest } from 'next/server';
-import { middleware } from '@/middleware';
+import { proxy } from '@/proxy';
 
 function makeRequest(opts: {
   method: string;
@@ -14,7 +14,7 @@ function makeRequest(opts: {
   return new NextRequest(opts.url, { method: opts.method, headers });
 }
 
-describe('middleware — same-origin enforcement', () => {
+describe('proxy — same-origin enforcement', () => {
   const originalAllowed = process.env.ALLOWED_ORIGINS;
 
   afterEach(() => {
@@ -31,7 +31,7 @@ describe('middleware — same-origin enforcement', () => {
       url: 'http://localhost:3000/api/upload',
       origin: 'http://evil.example.com',
     });
-    const res = await middleware(req);
+    const res = await proxy(req);
     expect(res.status).toBe(403);
     const body = await res.json();
     expect(body).toHaveProperty('error');
@@ -42,7 +42,7 @@ describe('middleware — same-origin enforcement', () => {
       method: 'POST',
       url: 'http://localhost:3000/api/upload',
     });
-    const res = await middleware(req);
+    const res = await proxy(req);
     expect(res.status).toBe(403);
   });
 
@@ -54,7 +54,7 @@ describe('middleware — same-origin enforcement', () => {
         url: 'http://localhost:3000/api/upload',
         origin: 'http://evil.example.com',
       });
-      const res = await middleware(req);
+      const res = await proxy(req);
       expect(res.status).toBe(403);
     },
   );
@@ -65,7 +65,7 @@ describe('middleware — same-origin enforcement', () => {
       url: 'http://localhost:3000/api/upload',
       origin: 'http://localhost:3000',
     });
-    const res = await middleware(req);
+    const res = await proxy(req);
     expect(res.status).toBe(200);
     expect(res.headers.get('x-middleware-next')).toBeTruthy();
   });
@@ -76,7 +76,7 @@ describe('middleware — same-origin enforcement', () => {
       url: 'http://localhost:3000/api/documents/latest',
       origin: 'http://evil.example.com',
     });
-    const res = await middleware(req);
+    const res = await proxy(req);
     expect(res.status).toBe(200);
     expect(res.headers.get('x-middleware-next')).toBeTruthy();
   });
@@ -86,7 +86,7 @@ describe('middleware — same-origin enforcement', () => {
       method: 'GET',
       url: 'http://localhost:3000/api/progress/abc',
     });
-    const res = await middleware(req);
+    const res = await proxy(req);
     expect(res.status).toBe(200);
     expect(res.headers.get('x-middleware-next')).toBeTruthy();
   });
@@ -98,7 +98,7 @@ describe('middleware — same-origin enforcement', () => {
       url: 'http://localhost:3000/api/upload',
       origin: 'http://trusted.example.com',
     });
-    const res = await middleware(req);
+    const res = await proxy(req);
     expect(res.status).toBe(200);
     expect(res.headers.get('x-middleware-next')).toBeTruthy();
   });
@@ -110,7 +110,7 @@ describe('middleware — same-origin enforcement', () => {
       url: 'http://localhost:3000/api/upload',
       origin: 'http://untrusted.example.com',
     });
-    const res = await middleware(req);
+    const res = await proxy(req);
     expect(res.status).toBe(403);
   });
 
@@ -121,7 +121,7 @@ describe('middleware — same-origin enforcement', () => {
       url: 'http://localhost:3000/api/upload',
       origin: 'http://trusted.example.com',
     });
-    const res = await middleware(req);
+    const res = await proxy(req);
     expect(res.status).toBe(200);
     expect(res.headers.get('x-middleware-next')).toBeTruthy();
   });
