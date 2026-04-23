@@ -4,10 +4,11 @@ import { StorageError } from '@/app/lib/utils/error-handler';
 const DOCUMENTS_TABLE = 'documents';
 const UNEXPECTED_STORAGE_ERROR_MSG = 'Unexpected storage error';
 
-// Reject any traversal segment so user-controlled inputs cannot escape the
-// documents bucket scope.
+// Whitelist allowed characters and reject traversal/absolute paths so
+// user-controlled inputs cannot escape the documents bucket scope.
+const SAFE_PATH_RE = /^[a-zA-Z0-9._/-]+$/;
 function assertSafePath(path: string): void {
-  if (path.includes('..')) {
+  if (!SAFE_PATH_RE.test(path) || path.includes('..') || path.startsWith('/')) {
     throw new StorageError('Invalid path');
   }
 }
